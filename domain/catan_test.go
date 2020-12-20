@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/rannoch/catan/domain"
 	"github.com/rannoch/catan/grid"
+	"sort"
 	"time"
 )
 
@@ -55,10 +56,25 @@ func (testBoardGenerator) GenerateBoard() domain.Board {
 	)
 }
 
-var _ = Describe("Catan", func() {
+type alphaBetPlayersShuffler struct{}
 
+func (alphaBetPlayersShuffler) Shuffle(players []domain.Player) []domain.Color {
+	var colors []domain.Color
+
+	for _, player := range players {
+		colors = append(colors, player.Color())
+	}
+
+	sort.Slice(colors, func(i, j int) bool {
+		return colors[i] < colors[j]
+	})
+
+	return colors
+}
+
+var _ = Describe("Catan", func() {
 	var (
-		game    domain.Game
+		game    *domain.Game
 		err     error
 		players = []domain.Player{
 			domain.NewPlayer(domain.Blue, "baska"),
@@ -69,54 +85,58 @@ var _ = Describe("Catan", func() {
 	)
 
 	BeforeEach(func() {
-		game = domain.NewGame("test_id")
+		game = domain.NewGame("test_id", time.Now())
 	})
 
 	Describe("enter to initial set-up", func() {
 		startGameCommandOccurred := time.Now()
 
 		BeforeEach(func() {
-			startGameCommand := domain.NewStartGameCommand(
-				startGameCommandOccurred,
-				players,
-				domain.NewRandomPlayersShuffler(),
-				testBoardGenerator{},
-			)
-
-			events, err := startGameCommand.Process(game)
+			// add players
+			for _, player := range players {
+				err := game.AddPlayer(player, time.Now())
+				Expect(err).To(BeNil())
+			}
+			// set board generator
+			err := game.SetBoardGenerator(testBoardGenerator{})
+			Expect(err).To(BeNil())
+			// set players shuffler
+			err = game.SetPlayersShuffler(alphaBetPlayersShuffler{})
 			Expect(err).To(BeNil())
 
-			game = game.WithAppliedEvents(events...)
+			err = game.StartGame(time.Now())
+
+			Expect(err).To(BeNil())
 		})
 
 		It("game should enter set-up phase", func() {
 			Expect(err).To(BeNil())
 			Expect(game.Id()).To(Equal(domain.GameId("test_id")))
-			Expect(game.IsStarted()).To(BeTrue())
-			Expect(game.Status()).To(Equal(domain.GameStatusInitialSetup))
+			Expect(game.InStatus(&domain.GameStateInitialSetup{})).To(BeTrue())
 			Expect(game.TurnOrder()).To(Equal([]domain.Color{
 				domain.Blue,
+				domain.Green,
 				domain.Red,
 				domain.Yellow,
-				domain.Green,
-				domain.Green,
 				domain.Yellow,
 				domain.Red,
+				domain.Green,
 				domain.Blue,
 			}))
-			Expect(game.Version()).To(Equal(int64(5)))
+			Expect(game.Version()).To(Equal(int64(9)))
 			Expect(game.TotalTurns()).To(Equal(int64(0)))
 			Expect(game.CurrentTurn()).To(Equal(domain.Blue))
-			Expect(game.NextTurnColor()).To(Equal(domain.Red))
+			Expect(game.NextTurnColor()).To(Equal(domain.Green))
 
-			playerRed, err := game.Player(domain.Red)
+			_, err := game.Player(domain.Red)
 			Expect(err).To(BeNil())
 
-			Expect(playerRed.AvailableSettlements()).To(Equal(int64(5)))
-			Expect(playerRed.AvailableCities()).To(Equal(int64(4)))
-			Expect(playerRed.AvailableRoads()).To(Equal(int64(15)))
-
-			//Expect(game.Players).To(Equal(players))
+			for _, player := range game.Players() {
+				Expect(player.AvailableSettlements()).To(Equal(int64(5)))
+				Expect(player.AvailableCities()).To(Equal(int64(4)))
+				Expect(player.AvailableRoads()).To(Equal(int64(15)))
+			}
+			Expect(len(game.Players())).To(Equal(len(players)))
 		})
 
 		It("intersection (3,1,R) should exist and for example (3213,1,R) not ", func() {
@@ -131,17 +151,14 @@ var _ = Describe("Catan", func() {
 
 		When("first player builds initial settlement", func() {
 			BeforeEach(func() {
-				buildSettlementCommand := domain.NewBuildSettlementCommand(
-					startGameCommandOccurred,
+				err := game.BuildSettlement(
 					game.CurrentTurn(),
 					grid.IntersectionCoord{R: 3, C: 1, D: grid.R},
 					domain.NewSettlement(game.CurrentTurn()),
+					startGameCommandOccurred,
 				)
 
-				events, err := buildSettlementCommand.Process(game)
 				Expect(err).To(BeNil())
-
-				game = game.WithAppliedEvents(events...)
 			})
 
 			It("board should have the settlement with right color", func() {
@@ -152,6 +169,10 @@ var _ = Describe("Catan", func() {
 			})
 
 			When("first player builds a legal road", func() {
+				BeforeEach(func() {
+
+				})
+
 				It("board should have the road with right color ", func() {
 
 				})

@@ -13,6 +13,8 @@ const (
 	Yellow Color = "yellow"
 )
 
+var allColors = []Color{Red, Blue, White, Green, Yellow}
+
 type Player struct {
 	userId UserId // User aggregate id, extract name and other info using this reference
 
@@ -33,6 +35,10 @@ type Player struct {
 
 	devCardPlayed bool
 	devCards      []string // todo
+}
+
+func (player *Player) SetColor(color Color) {
+	player.color = color
 }
 
 func (player Player) DevCardPlayed() bool {
@@ -92,14 +98,12 @@ func (player Player) Resources() []resource {
 	return player.resources
 }
 
-func (player Player) WithGainedResources(resources []resource) Player {
+func (player *Player) GainResources(resources []resource) {
 	for _, resource := range resources {
 		player.resourcesTypeCount[resource]++
 	}
 
 	player.resources = append(player.resources, resources...)
-
-	return player
 }
 
 func (player Player) WithDisposedResources(resources []resource) Player {
@@ -119,6 +123,7 @@ func (player Player) WithDisposedResources(resources []resource) Player {
 
 var (
 	ErrOutOfSettlements   = errors.New("out of settlements")
+	ErrOutOfCities        = errors.New("out of cities")
 	ErrOutOfRoads         = errors.New("out of roads")
 	ErrNotEnoughResources = errors.New("not enough resources")
 )
@@ -126,6 +131,14 @@ var (
 func (player Player) CanBuildSettlement() error {
 	if player.availableSettlements == 0 {
 		return ErrOutOfSettlements
+	}
+
+	return nil
+}
+
+func (player Player) CanBuildCity() error {
+	if player.availableCities == 0 {
+		return ErrOutOfCities
 	}
 
 	return nil
