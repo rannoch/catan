@@ -2,8 +2,9 @@ package domain
 
 import (
 	"errors"
-	"github.com/rannoch/catan/grid"
 	"time"
+
+	"github.com/rannoch/catan/grid"
 )
 
 var CommandIsForbiddenErr = errors.New("command is forbidden")
@@ -17,7 +18,7 @@ type GameState interface {
 	AddPlayer(player Player, occurred time.Time) error
 	RemovePlayer(player Player, occurred time.Time) error
 
-	StartGame(occurred time.Time, ) error
+	StartGame(occurred time.Time) error
 
 	BuildSettlement(
 		playerColor Color,
@@ -28,7 +29,7 @@ type GameState interface {
 	BuildRoad(
 		playerColor Color,
 		pathCoord grid.PathCoord,
-		road road,
+		road Road,
 		occurred time.Time,
 	) error
 	BuyDevelopmentCard(playerColor Color, card DevelopmentCard) error
@@ -61,7 +62,7 @@ func (d GameStateDefault) SetPlayersShuffler(PlayersShuffler) error {
 	return CommandIsForbiddenErr
 }
 
-func (GameStateDefault) StartGame(time.Time, ) error {
+func (GameStateDefault) StartGame(time.Time) error {
 	return CommandIsForbiddenErr
 }
 
@@ -69,7 +70,7 @@ func (GameStateDefault) BuildSettlement(Color, grid.IntersectionCoord, Settlemen
 	return CommandIsForbiddenErr
 }
 
-func (GameStateDefault) BuildRoad(Color, grid.PathCoord, road, time.Time) error {
+func (GameStateDefault) BuildRoad(Color, grid.PathCoord, Road, time.Time) error {
 	return CommandIsForbiddenErr
 }
 

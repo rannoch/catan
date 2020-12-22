@@ -1,9 +1,10 @@
 package domain
 
 import (
-	"github.com/rannoch/catan/grid"
 	"reflect"
 	"time"
+
+	"github.com/rannoch/catan/grid"
 )
 
 type EventMessage interface {
@@ -114,10 +115,12 @@ type PlayerWasRobbedByPlayerEvent struct {
 
 type PlayerFinishedHisTurnEvent struct {
 	playerColor Color
+	occurred    time.Time
 }
 
 type PlayerStartedHisTurnEvent struct {
 	playerColor Color
+	occurred    time.Time
 }
 
 type PlayerBuiltSettlementEvent struct {
@@ -129,5 +132,6 @@ type PlayerBuiltSettlementEvent struct {
 type PlayerBuiltRoadEvent struct {
 	playerColor Color
 	pathCoord   grid.PathCoord
-	road        road
+	road        Road
+	occurred    time.Time
 }

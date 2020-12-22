@@ -73,6 +73,71 @@ func (h HexagonGridWithOffsetCoordsCalculator) HexAdjacentPaths(hexCoord HexCoor
 	}
 }
 
+func (h HexagonGridWithOffsetCoordsCalculator) PathAdjacentIntersections(pathCoord PathCoord) []IntersectionCoord {
+	switch pathCoord.D {
+	case W:
+		return []IntersectionCoord{
+			{R: pathCoord.R, C: pathCoord.C, D: L},
+			{R: pathCoord.R - 1, C: pathCoord.C - 1, D: R},
+		}
+	case E:
+		return []IntersectionCoord{
+			{R: pathCoord.R, C: pathCoord.C + 1, D: L},
+			{R: pathCoord.R, C: pathCoord.C, D: R},
+		}
+	case N:
+		return []IntersectionCoord{
+			{R: pathCoord.R - 1, C: pathCoord.C - 1, D: R},
+			{R: pathCoord.R, C: pathCoord.C + 1, D: L},
+		}
+	}
+
+	return nil
+}
+
+func (h HexagonGridWithOffsetCoordsCalculator) PathAdjacentPaths(pathCoord PathCoord) []PathCoord {
+	switch pathCoord.D {
+	case W:
+		return []PathCoord{
+			{R: pathCoord.R - 1, C: pathCoord.C - 1, D: E},
+			{R: pathCoord.R, C: pathCoord.C, D: N},
+			{R: pathCoord.R, C: pathCoord.C - 1, D: E},
+			{R: pathCoord.R, C: pathCoord.C - 1, D: N},
+		}
+	case E:
+		return []PathCoord{
+			{R: pathCoord.R, C: pathCoord.C, D: N},
+			{R: pathCoord.R, C: pathCoord.C + 1, D: W},
+			{R: pathCoord.R + 1, C: pathCoord.C + 1, D: N},
+			{R: pathCoord.R + 1, C: pathCoord.C + 1, D: W},
+		}
+	case N:
+		return []PathCoord{
+			{R: pathCoord.R, C: pathCoord.C, D: W},
+			{R: pathCoord.R - 1, C: pathCoord.C - 1, D: E},
+			{R: pathCoord.R, C: pathCoord.C + 1, D: W},
+			{R: pathCoord.R, C: pathCoord.C, D: E},
+		}
+	}
+
+	return nil
+}
+
+func (h HexagonGridWithOffsetCoordsCalculator) PathsJointIntersection(pathCoord1, pathCoord2 PathCoord) (IntersectionCoord, bool) {
+	intersections1 := h.PathAdjacentIntersections(pathCoord1)
+	intersections2 := h.PathAdjacentIntersections(pathCoord2)
+
+	for _, intersectionCoord1 := range intersections1 {
+		for _, intersectionCoord2 := range intersections2 {
+			if intersectionCoord1 == intersectionCoord2 {
+				return intersectionCoord1, true
+			}
+		}
+	}
+
+	return IntersectionCoord{}, false
+}
+
 type HexCoord struct {
 	R int64 // row
 	C int64 // column

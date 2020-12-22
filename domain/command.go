@@ -1,8 +1,9 @@
 package domain
 
 import (
-	"github.com/rannoch/catan/grid"
 	"time"
+
+	"github.com/rannoch/catan/grid"
 )
 
 type PlayersShuffler interface {
@@ -60,5 +61,5 @@ type BuildRoadCommand struct {
 	occurred    time.Time
 	playerColor Color
 	pathCoord   grid.PathCoord
-	road        road
+	road        Road
 }

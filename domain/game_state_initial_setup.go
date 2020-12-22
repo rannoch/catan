@@ -1,8 +1,9 @@
 package domain
 
 import (
-	"github.com/rannoch/catan/grid"
 	"time"
+
+	"github.com/rannoch/catan/grid"
 )
 
 type GameStateInitialSetup struct {
@@ -16,7 +17,7 @@ func NewGameStateInitialSetup(game *Game) *GameStateInitialSetup {
 
 var _ GameState = (*GameStateInitialSetup)(nil)
 
-func (gameStatusInitialSetup *GameStateInitialSetup) StartGame(time.Time, ) error {
+func (gameStatusInitialSetup *GameStateInitialSetup) StartGame(time.Time) error {
 	return GameAlreadyStartedErr
 }
 
@@ -41,7 +42,15 @@ func (gameStatusInitialSetup *GameStateInitialSetup) BuildSettlement(playerColor
 		return WrongTurnErr
 	}
 
-	// todo check if the player already placed a building
+	player, err := game.Player(playerColor)
+	if err != nil {
+		return err
+	}
+
+	// check if the player already placed a building
+	if player.availableSettlements != player.availableRoads-10 {
+		return CommandIsForbiddenErr
+	}
 
 	if err := game.Board().CanBuildSettlementOrCity(intersectionCoord, settlement); err != nil {
 		return err
@@ -64,14 +73,22 @@ func (gameStatusInitialSetup *GameStateInitialSetup) BuildSettlement(playerColor
 	return nil
 }
 
-func (gameStatusInitialSetup *GameStateInitialSetup) BuildRoad(playerColor Color, pathCoord grid.PathCoord, road road, occurred time.Time) error {
+func (gameStatusInitialSetup *GameStateInitialSetup) BuildRoad(playerColor Color, pathCoord grid.PathCoord, road Road, occurred time.Time) error {
 	game := gameStatusInitialSetup.game
 
 	if game.CurrentTurn() != playerColor {
 		return WrongTurnErr
 	}
 
-	// todo check if the player already placed a building
+	player, err := game.Player(playerColor)
+	if err != nil {
+		return err
+	}
+
+	// check if the player already placed a building
+	if player.availableRoads-player.availableSettlements != 11 {
+		return CommandIsForbiddenErr
+	}
 
 	// check if the board allowing to build
 	if err := game.Board().CanBuildRoad(pathCoord, road); err != nil {
@@ -79,20 +96,16 @@ func (gameStatusInitialSetup *GameStateInitialSetup) BuildRoad(playerColor Color
 	}
 
 	game.Apply(
-		NewEventDescriptor(string(game.Id()), PlayerBuiltRoadEvent{
-			playerColor: playerColor,
-			pathCoord:   pathCoord,
-			road:        road,
-		}, nil, game.version, occurred,
-		),
-		true,
-	)
-
-	// todo make aftereffect
-	game.Apply(
-		NewEventDescriptor(string(game.Id()), PlayerFinishedHisTurnEvent{
-			playerColor: playerColor,
-		}, nil, game.version, occurred,
+		NewEventDescriptor(
+			string(game.Id()),
+			PlayerBuiltRoadEvent{
+				playerColor: playerColor,
+				pathCoord:   pathCoord,
+				road:        road,
+			},
+			nil,
+			game.version,
+			occurred,
 		),
 		true,
 	)
@@ -101,7 +114,22 @@ func (gameStatusInitialSetup *GameStateInitialSetup) BuildRoad(playerColor Color
 }
 
 func (gameStatusInitialSetup *GameStateInitialSetup) EndTurn(playerColor Color, occurred time.Time) error {
-	// todo check if the player placed a building and a road
+	game := gameStatusInitialSetup.game
+
+	if game.CurrentTurn() != playerColor {
+		return WrongTurnErr
+	}
+
+	player, err := game.Player(playerColor)
+	if err != nil {
+		return err
+	}
+
+	// check if the player placed a building and a road
+	if !(player.availableSettlements == 4 && player.availableRoads == 14) ||
+		!(player.availableSettlements == 3 && player.availableRoads == 13) {
+		return CommandIsForbiddenErr
+	}
 
 	gameStatusInitialSetup.game.Apply(
 		NewEventDescriptor(
@@ -134,17 +162,27 @@ func (gameStatusInitialSetup *GameStateInitialSetup) TurnOrder() []Color {
 	return append(gameStatusInitialSetup.game.turnOrder, turnOrderReversed...)
 }
 
-func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMessage, _ bool) {
+func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMessage, isNew bool) {
 	game := gameStatusInitialSetup.game
 
 	switch event := eventMessage.Event().(type) {
 	case PlayerStartedHisTurnEvent:
 		game.currentTurn = event.playerColor
 	case PlayerFinishedHisTurnEvent:
+		nextPlayerStartedHisTurnEventMessage := NewEventDescriptor(
+			string(game.Id()),
+			PlayerStartedHisTurnEvent{
+				playerColor: game.NextTurnColor(),
+			},
+			nil,
+			game.version,
+			event.occurred,
+		)
+
 		game.totalTurns++       // todo increment
 		game.currentTurn = None // todo setter
 
-		// todo invoke next player start his turn
+		game.Apply(nextPlayerStartedHisTurnEventMessage, isNew)
 	case PlayerBuiltSettlementEvent:
 		player, err := game.Player(event.playerColor)
 		if err != nil {
@@ -173,7 +211,20 @@ func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMes
 			panic(err)
 		}
 
-		game.setBoard(game.Board().BuildRoad(event.pathCoord, event.road))
+		game.Board().BuildRoad(event.pathCoord, event.road)
+
+		game.Apply(
+			NewEventDescriptor(
+				string(game.Id()),
+				PlayerFinishedHisTurnEvent{
+					playerColor: event.playerColor,
+				},
+				nil,
+				game.version,
+				event.occurred,
+			),
+			isNew,
+		)
 
 		// todo start play phase after last road has been built
 	case PlayPhaseStartedEvent:

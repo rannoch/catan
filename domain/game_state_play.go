@@ -1,8 +1,9 @@
 package domain
 
 import (
-	"github.com/rannoch/catan/grid"
 	"time"
+
+	"github.com/rannoch/catan/grid"
 )
 
 type GameStatePlay struct {
@@ -16,7 +17,7 @@ func NewGameStatePlay(game *Game) *GameStatePlay {
 
 var _ GameState = (*GameStatePlay)(nil)
 
-func (gameStatePlay *GameStatePlay) StartGame(time.Time, ) error {
+func (gameStatePlay *GameStatePlay) StartGame(time.Time) error {
 	return GameAlreadyStartedErr
 }
 
@@ -65,7 +66,7 @@ func (gameStatePlay *GameStatePlay) BuildSettlement(playerColor Color, intersect
 	return nil
 }
 
-func (gameStatePlay *GameStatePlay) BuildRoad(playerColor Color, pathCoord grid.PathCoord, road road, occurred time.Time) error {
+func (gameStatePlay *GameStatePlay) BuildRoad(playerColor Color, pathCoord grid.PathCoord, road Road, occurred time.Time) error {
 	game := gameStatePlay.game
 
 	if game.CurrentTurn() != playerColor {
@@ -129,7 +130,7 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 	case PlayerStartedHisTurnEvent:
 		game.currentTurn = event.playerColor
 	case PlayerFinishedHisTurnEvent:
-		game.totalTurns++ // todo increment
+		game.totalTurns++       // todo increment
 		game.currentTurn = None // todo setter
 
 		// todo invoke next player start his turn
@@ -161,7 +162,7 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 			panic(err)
 		}
 
-		game.setBoard(game.Board().BuildRoad(event.pathCoord, event.road))
+		game.Board().BuildRoad(event.pathCoord, event.road)
 	case PlayerWasRobbedByRobberEvent:
 		// todo
 	case PlayerWasRobbedByPlayerEvent:
