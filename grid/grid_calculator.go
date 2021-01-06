@@ -165,7 +165,10 @@ type PathCoord struct {
 type PathDirection string
 
 const (
+	// W - west path direction
 	W PathDirection = "west"
+	// N - north path direction
 	N PathDirection = "north"
+	// E - east path direction
 	E PathDirection = "east"
 )

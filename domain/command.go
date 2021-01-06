@@ -7,7 +7,7 @@ import (
 )
 
 type PlayersShuffler interface {
-	Shuffle(players []Player) []Color
+	Shuffle(playerColors []Color) []Color
 }
 
 type RandomPlayersShuffler struct{}
@@ -17,13 +17,8 @@ func NewRandomPlayersShuffler() RandomPlayersShuffler {
 }
 
 // todo true random
-func (RandomPlayersShuffler) Shuffle(players []Player) []Color {
-	var shuffledColors []Color
-	for _, player := range players {
-		shuffledColors = append(shuffledColors, player.color)
-	}
-
-	return shuffledColors
+func (RandomPlayersShuffler) Shuffle(playerColors []Color) []Color {
+	return playerColors
 }
 
 type BoardGenerator interface {

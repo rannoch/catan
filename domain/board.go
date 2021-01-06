@@ -6,6 +6,7 @@ import (
 	"github.com/rannoch/catan/grid"
 )
 
+// Board board interface
 type Board interface {
 	Intersection(intersectionCoord grid.IntersectionCoord) (Intersection, bool)
 
@@ -25,13 +26,18 @@ type Board interface {
 
 	LongestRoad(playerColor Color) int64
 
-	GetResourcesByRoll(roll int64) map[Color][]resource
+	GetResourcesByRoll(roll int64) map[Color][]ResourceCard
+
+	IntersectionInitialResources(intersectionCoord grid.IntersectionCoord) []ResourceCard
 }
 
 var (
-	ErrBadIntersectionCoord         = errors.New("bad intersection coord")
-	ErrIntersectionAlreadyHasObject = errors.New("intersectionCoord already has object")
-	ErrBadPathCoord                 = errors.New("bad path coord")
+	// BadIntersectionCoordErr is used when intersection is not is the board
+	BadIntersectionCoordErr = errors.New("bad intersection coord")
+	// IntersectionAlreadyHasObjectErr is used when intersection already has an object
+	IntersectionAlreadyHasObjectErr = errors.New("intersectionCoord already has an object")
+	// BadPathCoordErr is used when path in not the board
+	BadPathCoordErr = errors.New("bad path coord")
 )
 
 type BoardWithOffsetCoord struct {
@@ -95,12 +101,12 @@ func (board BoardWithOffsetCoord) HexesByNumberToken(roll int64) []Hex {
 func (board BoardWithOffsetCoord) CanBuildSettlementOrCity(intersectionCoord grid.IntersectionCoord, building Building) error {
 	intersection, exists := board.Intersection(intersectionCoord)
 	if !exists {
-		return ErrBadIntersectionCoord
+		return BadIntersectionCoordErr
 	}
 
 	// todo city check
 	if !intersection.IsEmpty() {
-		return ErrIntersectionAlreadyHasObject
+		return IntersectionAlreadyHasObjectErr
 	}
 
 	// todo add distance check
@@ -123,11 +129,11 @@ func (board *BoardWithOffsetCoord) BuildSettlementOrCity(intersectionCoord grid.
 func (board BoardWithOffsetCoord) CanBuildRoad(pathCoord grid.PathCoord, road Road) error {
 	path, exists := board.Path(pathCoord)
 	if !exists {
-		return ErrBadPathCoord
+		return BadPathCoordErr
 	}
 
 	if !path.IsEmpty() {
-		return ErrBadPathCoord
+		return BadPathCoordErr
 	}
 
 	// check if road is adjacent to existing and doesn't cross the building
@@ -205,8 +211,25 @@ func (board BoardWithOffsetCoord) LongestRoad(playerColor Color) int64 {
 	panic("implement me")
 }
 
-func (board BoardWithOffsetCoord) GetResourcesByRoll(roll int64) map[Color][]resource {
+func (board BoardWithOffsetCoord) GetResourcesByRoll(roll int64) map[Color][]ResourceCard {
 	panic("implement me")
+}
+
+func (board BoardWithOffsetCoord) IntersectionInitialResources(intersectionCoord grid.IntersectionCoord) []ResourceCard {
+	hexCoords := board.gridCalculator.IntersectionAdjacentHexes(intersectionCoord)
+
+	var resources []ResourceCard
+
+	for _, hexCoord := range hexCoords {
+		hex, exists := board.Hex(hexCoord)
+		if !exists {
+			continue
+		}
+
+		resources = append(resources, hex.Resource.GetResourceCard(1)...)
+	}
+
+	return resources
 }
 
 // settlement, city, or knight in future
@@ -242,8 +265,8 @@ func (Settlement) ResourceCount() int64 {
 	return 1
 }
 
-func (s Settlement) Cost() []resource {
-	return []resource{Wood, Brick, Sheep, Wheat}
+func (s Settlement) Cost() []ResourceCard {
+	return []ResourceCard{ResourceCardWood, ResourceCardBrick, ResourceCardSheep, ResourceCardWheat}
 }
 
 type City struct {
@@ -271,8 +294,8 @@ func (City) ResourceCount() int64 {
 	return 2
 }
 
-func (c City) Cost() []resource {
-	return []resource{Ore, Ore, Ore, Wheat, Wheat}
+func (c City) Cost() []ResourceCard {
+	return []ResourceCard{ResourceCardOre, ResourceCardOre, ResourceCardOre, ResourceCardWheat, ResourceCardWheat}
 }
 
 type Road struct {
@@ -287,8 +310,8 @@ var (
 	_ Buyable = Road{}
 )
 
-func (r Road) Cost() []resource {
-	return []resource{Wood, Brick}
+func (r Road) Cost() []ResourceCard {
+	return []ResourceCard{ResourceCardWood, ResourceCardBrick}
 }
 
 var WaterHex = Hex{
@@ -299,7 +322,7 @@ var WaterHex = Hex{
 type Hex struct {
 	NumberToken int64
 	Type        hexType
-	Resource    resource
+	Resource    Resource
 }
 
 type hexType string

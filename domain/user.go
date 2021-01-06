@@ -2,8 +2,10 @@ package domain
 
 import "time"
 
-type UserId string
+// UserId User aggregate id
+type UserId = string
 
+// User entity
 type User struct {
 	id         UserId
 	name       string

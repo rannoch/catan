@@ -20,8 +20,8 @@ type Player struct {
 
 	color Color
 
-	resources          []resource
-	resourcesTypeCount map[resource]int64
+	resources          []ResourceCard
+	resourcesTypeCount map[ResourceCard]int64
 
 	availableSettlements int64
 	availableCities      int64
@@ -35,6 +35,20 @@ type Player struct {
 
 	devCardPlayed bool
 	devCards      []string // todo
+}
+
+func NewPlayer(color Color, userId UserId) Player {
+	player := Player{
+		color:  color,
+		userId: userId,
+
+		availableRoads:       15,
+		availableCities:      4,
+		availableSettlements: 5,
+		resourcesTypeCount:   make(map[ResourceCard]int64),
+	}
+
+	return player
 }
 
 func (player *Player) SetColor(color Color) {
@@ -73,19 +87,6 @@ func (player Player) AvailableSettlements() int64 {
 	return player.availableSettlements
 }
 
-func NewPlayer(color Color, userId UserId) Player {
-	player := Player{
-		color:  color,
-		userId: userId,
-
-		availableRoads:       15,
-		availableCities:      4,
-		availableSettlements: 5,
-	}
-
-	return player
-}
-
 func (player Player) UserId() UserId {
 	return player.userId
 }
@@ -94,11 +95,11 @@ func (player Player) Color() Color {
 	return player.color
 }
 
-func (player Player) Resources() []resource {
+func (player Player) Resources() []ResourceCard {
 	return player.resources
 }
 
-func (player *Player) GainResources(resources []resource) {
+func (player *Player) GainResources(resources []ResourceCard) {
 	for _, resource := range resources {
 		player.resourcesTypeCount[resource]++
 	}
@@ -106,12 +107,12 @@ func (player *Player) GainResources(resources []resource) {
 	player.resources = append(player.resources, resources...)
 }
 
-func (player Player) WithDisposedResources(resources []resource) Player {
+func (player Player) WithDisposedResources(resources []ResourceCard) Player {
 	for _, resource := range resources {
 		player.resourcesTypeCount[resource]-- // todo possible below zero case
 	}
 
-	player.resources = []resource{}
+	player.resources = []ResourceCard{}
 	for resource, count := range player.resourcesTypeCount {
 		for i := 0; i < int(count); i++ {
 			player.resources = append(player.resources, resource)
@@ -122,15 +123,15 @@ func (player Player) WithDisposedResources(resources []resource) Player {
 }
 
 var (
-	ErrOutOfSettlements   = errors.New("out of settlements")
-	ErrOutOfCities        = errors.New("out of cities")
-	ErrOutOfRoads         = errors.New("out of roads")
-	ErrNotEnoughResources = errors.New("not enough resources")
+	OutOfSettlementsErr   = errors.New("out of settlements")
+	OutOfCitiesErr        = errors.New("out of cities")
+	OutOfRoadsErr         = errors.New("out of roads")
+	NotEnoughResourcesErr = errors.New("not enough resources")
 )
 
 func (player Player) CanBuildSettlement() error {
 	if player.availableSettlements == 0 {
-		return ErrOutOfSettlements
+		return OutOfSettlementsErr
 	}
 
 	return nil
@@ -138,7 +139,7 @@ func (player Player) CanBuildSettlement() error {
 
 func (player Player) CanBuildCity() error {
 	if player.availableCities == 0 {
-		return ErrOutOfCities
+		return OutOfCitiesErr
 	}
 
 	return nil
@@ -146,7 +147,7 @@ func (player Player) CanBuildCity() error {
 
 func (player Player) HasAvailableRoad() error {
 	if player.availableRoads == 0 {
-		return ErrOutOfRoads
+		return OutOfRoadsErr
 	}
 
 	return nil
@@ -157,7 +158,7 @@ func (player Player) CanBuy(buyable Buyable) error {
 
 	for _, resource := range buyable.Cost() {
 		if resourcesTypeCount[resource] == 0 {
-			return ErrNotEnoughResources
+			return NotEnoughResourcesErr
 		}
 
 		resourcesTypeCount[resource]--
@@ -168,4 +169,12 @@ func (player Player) CanBuy(buyable Buyable) error {
 
 func (player Player) Buy(buyable Buyable) Player {
 	return player.WithDisposedResources(buyable.Cost())
+}
+
+func (player Player) HasPlacedInitialBuildings() bool {
+	return player.availableSettlements == 3
+}
+
+func (player Player) HasPlacedInitialBuildingsAndRoads() bool {
+	return player.availableSettlements == 3 && player.availableRoads == 13
 }

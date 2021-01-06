@@ -10,22 +10,18 @@ import (
 
 type (
 	// aggregate id
-	GameId string
+	GameId = string
 )
 
-//const (
-//	GameStatusNew          GameState = "new"
-//	GameStatusStarted      GameState = "started"
-//	GameStatusInitialSetup GameState = "initial_setup"
-//	GameStatusPlay         GameState = "play"
-//	GameFinished           GameState = "finished"
-//)
-
 var (
-	GameAlreadyStartedErr  = errors.New("game already started")
-	GameAlreadyFinishedErr = errors.New("game already finished")
-	PlayerNotExistsErr     = errors.New("player does not exist")
-	WrongTurnErr           = errors.New("wrong turn")
+	// GameAlreadyStartedErr game is already started error
+	GameAlreadyStartedErr = errors.New("game is already started")
+	// GameAlreadyFinishedErr game is already finished
+	GameAlreadyFinishedErr = errors.New("game is already finished")
+	// PlayerNotExistsErr player with Color does not exist
+	PlayerNotExistsErr = errors.New("player does not exist")
+	// WrongTurnErr is occurred when player tries to do something during not his turn
+	WrongTurnErr = errors.New("wrong turn")
 )
 
 type roll struct {
@@ -40,7 +36,7 @@ type Game struct {
 	players map[Color]Player
 	board   Board
 
-	state GameState // todo
+	state GameState
 
 	turnOrder   []Color
 	currentTurn Color
@@ -54,17 +50,21 @@ type Game struct {
 
 	boardGenerator  BoardGenerator
 	playersShuffler PlayersShuffler
+
+	availableResources map[ResourceCard][]ResourceCard // todo properly
 	// todo trades
 	// todo turn
 }
 
 func NewGame(id GameId, occurred time.Time) *Game {
 	game := &Game{
-		id:      id,
 		players: make(map[Color]Player),
 	}
 
-	game.setState(NewGameStateNew(game), occurred)
+	game.Apply(NewEventDescriptor(id, GameCreated{
+		GameId: id,
+	}, nil, game.Version(), occurred), true)
+
 	return game
 }
 
@@ -78,6 +78,14 @@ func (game *Game) SetBoardGenerator(boardGenerator BoardGenerator) error {
 
 func (game *Game) SetPlayersShuffler(playersShuffler PlayersShuffler) error {
 	return game.state.SetPlayersShuffler(playersShuffler)
+}
+
+func (game *Game) GenerateBoard(occurred time.Time) error {
+	return game.state.GenerateBoard(occurred)
+}
+
+func (game *Game) ShufflePlayers(occurred time.Time) error {
+	return game.state.ShufflePlayers(occurred)
 }
 
 func (game *Game) StartGame(
@@ -119,7 +127,13 @@ func (game *Game) Apply(eventMessage EventMessage, isNew bool) {
 		game.trackChange(eventMessage)
 	}
 
-	game.state.Apply(eventMessage, isNew)
+	switch event := eventMessage.Event().(type) {
+	case GameCreated:
+		game.id = event.GameId
+		game.setState(NewGameStateNew(game))
+	default:
+		game.state.Apply(eventMessage, isNew)
+	}
 }
 
 // todo
@@ -209,6 +223,38 @@ func (game *Game) incrementVersion() {
 	game.version++
 }
 
+func (game *Game) addPlayer(player Player) {
+	if player.Color() == None {
+		// set first available color
+		for _, color := range allColors {
+			_, err := game.Player(color)
+			if err == PlayerNotExistsErr {
+				player.SetColor(color)
+				break
+			}
+		}
+	}
+
+	game.turnOrder = append(game.turnOrder, player.color)
+
+	if game.players == nil {
+		game.players = make(map[Color]Player)
+	}
+
+	game.players[player.Color()] = player
+}
+
+func (game *Game) removePlayer(player Player) {
+	delete(game.players, player.Color())
+
+	for i, color := range game.turnOrder {
+		if player.Color() == color {
+			copy(game.turnOrder[i:], game.turnOrder[i+1:])
+			break
+		}
+	}
+}
+
 func (game *Game) updatePlayer(player Player) error {
 	_, err := game.Player(player.color)
 	if err != nil {
@@ -224,9 +270,8 @@ func (game *Game) setBoard(board Board) {
 	game.board = board
 }
 
-func (game *Game) setState(state GameState, occurred time.Time) {
+func (game *Game) setState(state GameState) {
 	game.state = state
-	game.state.EnterState(occurred)
 }
 
 func (game *Game) setTurnOrder(turnOrder []Color) {
@@ -243,4 +288,12 @@ func (game *Game) setPlayersShuffler(playersShuffler PlayersShuffler) {
 
 func (game *Game) setBoardGenerator(boardGenerator BoardGenerator) {
 	game.boardGenerator = boardGenerator
+}
+
+func (game *Game) incrementTotalTurns() {
+	game.totalTurns++
+}
+
+func (game *Game) setCurrentTurn(color Color) {
+	game.currentTurn = color
 }

@@ -23,9 +23,9 @@ func (gameStatusInitialSetup *GameStateInitialSetup) StartGame(time.Time) error 
 
 func (gameStatusInitialSetup *GameStateInitialSetup) EnterState(occurred time.Time) {
 	playerStartedHisTurnEventMessage := NewEventDescriptor(
-		string(gameStatusInitialSetup.game.Id()),
+		gameStatusInitialSetup.game.Id(),
 		PlayerStartedHisTurnEvent{
-			playerColor: gameStatusInitialSetup.game.turnOrder[0],
+			PlayerColor: gameStatusInitialSetup.game.turnOrder[0],
 		},
 		nil,
 		gameStatusInitialSetup.game.Version(),
@@ -57,11 +57,11 @@ func (gameStatusInitialSetup *GameStateInitialSetup) BuildSettlement(playerColor
 	}
 
 	playerBuiltSettlementEventMessage := NewEventDescriptor(
-		string(game.Id()),
+		game.Id(),
 		PlayerBuiltSettlementEvent{
-			playerColor:       playerColor,
-			intersectionCoord: intersectionCoord,
-			settlement:        settlement,
+			PlayerColor:       playerColor,
+			IntersectionCoord: intersectionCoord,
+			Settlement:        settlement,
 		},
 		nil,
 		game.Version(),
@@ -69,6 +69,26 @@ func (gameStatusInitialSetup *GameStateInitialSetup) BuildSettlement(playerColor
 	)
 
 	game.Apply(playerBuiltSettlementEventMessage, true)
+
+	player, err = game.Player(playerColor)
+	if err != nil {
+		return err
+	}
+
+	if player.HasPlacedInitialBuildings() {
+		playerPickedResourcesEventMessage := NewEventDescriptor(
+			game.Id(),
+			PlayerPickedResourcesEvent{
+				PlayerColor:     playerColor,
+				PickedResources: game.board.IntersectionInitialResources(intersectionCoord),
+			},
+			nil,
+			game.version,
+			occurred,
+		)
+
+		game.Apply(playerPickedResourcesEventMessage, true)
+	}
 
 	return nil
 }
@@ -97,11 +117,11 @@ func (gameStatusInitialSetup *GameStateInitialSetup) BuildRoad(playerColor Color
 
 	game.Apply(
 		NewEventDescriptor(
-			string(game.Id()),
+			game.Id(),
 			PlayerBuiltRoadEvent{
-				playerColor: playerColor,
-				pathCoord:   pathCoord,
-				road:        road,
+				PlayerColor: playerColor,
+				PathCoord:   pathCoord,
+				Road:        road,
 			},
 			nil,
 			game.version,
@@ -109,6 +129,10 @@ func (gameStatusInitialSetup *GameStateInitialSetup) BuildRoad(playerColor Color
 		),
 		true,
 	)
+
+	if err := gameStatusInitialSetup.EndTurn(playerColor, occurred); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -126,16 +150,18 @@ func (gameStatusInitialSetup *GameStateInitialSetup) EndTurn(playerColor Color, 
 	}
 
 	// check if the player placed a building and a road
-	if !(player.availableSettlements == 4 && player.availableRoads == 14) ||
+	if !(player.availableSettlements == 4 && player.availableRoads == 14) &&
 		!(player.availableSettlements == 3 && player.availableRoads == 13) {
 		return CommandIsForbiddenErr
 	}
 
+	nextPlayerColor := game.NextTurnColor() // todo better approach
+
 	gameStatusInitialSetup.game.Apply(
 		NewEventDescriptor(
-			string(gameStatusInitialSetup.game.Id()),
+			gameStatusInitialSetup.game.Id(),
 			PlayerFinishedHisTurnEvent{
-				playerColor: playerColor,
+				PlayerColor: playerColor,
 			},
 			nil,
 			gameStatusInitialSetup.game.version,
@@ -143,6 +169,23 @@ func (gameStatusInitialSetup *GameStateInitialSetup) EndTurn(playerColor Color, 
 		),
 		true,
 	)
+
+	if gameStatusInitialSetup.checkAndMoveToPlayStateIfNeeded(occurred) {
+		return nil
+	}
+
+	nextPlayerStartedHisTurnEventMessage := NewEventDescriptor(
+		game.Id(),
+		PlayerStartedHisTurnEvent{
+			PlayerColor: nextPlayerColor,
+		},
+		nil,
+		game.version,
+		occurred,
+	)
+
+	game.Apply(nextPlayerStartedHisTurnEventMessage, true)
+
 	return nil
 }
 
@@ -162,34 +205,22 @@ func (gameStatusInitialSetup *GameStateInitialSetup) TurnOrder() []Color {
 	return append(gameStatusInitialSetup.game.turnOrder, turnOrderReversed...)
 }
 
-func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMessage, isNew bool) {
+func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMessage, _ bool) {
 	game := gameStatusInitialSetup.game
 
 	switch event := eventMessage.Event().(type) {
 	case PlayerStartedHisTurnEvent:
-		game.currentTurn = event.playerColor
+		game.setCurrentTurn(event.PlayerColor)
 	case PlayerFinishedHisTurnEvent:
-		nextPlayerStartedHisTurnEventMessage := NewEventDescriptor(
-			string(game.Id()),
-			PlayerStartedHisTurnEvent{
-				playerColor: game.NextTurnColor(),
-			},
-			nil,
-			game.version,
-			event.occurred,
-		)
-
-		game.totalTurns++       // todo increment
-		game.currentTurn = None // todo setter
-
-		game.Apply(nextPlayerStartedHisTurnEventMessage, isNew)
+		game.incrementTotalTurns()
+		game.setCurrentTurn(None)
 	case PlayerBuiltSettlementEvent:
-		player, err := game.Player(event.playerColor)
+		player, err := game.Player(event.PlayerColor)
 		if err != nil {
 			panic(err)
 		}
 
-		player.victoryPoints += event.settlement.VictoryPoints()
+		player.victoryPoints += event.Settlement.VictoryPoints()
 		player.availableSettlements--
 
 		err = game.updatePlayer(player)
@@ -197,9 +228,9 @@ func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMes
 			panic(err)
 		}
 
-		game.setBoard(game.Board().BuildSettlementOrCity(event.intersectionCoord, event.settlement))
+		game.setBoard(game.Board().BuildSettlementOrCity(event.IntersectionCoord, event.Settlement))
 	case PlayerBuiltRoadEvent:
-		player, err := game.Player(event.playerColor)
+		player, err := game.Player(event.PlayerColor)
 		if err != nil {
 			panic(err)
 		}
@@ -211,24 +242,44 @@ func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMes
 			panic(err)
 		}
 
-		game.Board().BuildRoad(event.pathCoord, event.road)
+		game.Board().BuildRoad(event.PathCoord, event.Road)
+	case PlayerPickedResourcesEvent:
+		player, err := game.Player(event.PlayerColor)
+		if err != nil {
+			panic(err) // todo
+		}
 
-		game.Apply(
-			NewEventDescriptor(
-				string(game.Id()),
-				PlayerFinishedHisTurnEvent{
-					playerColor: event.playerColor,
-				},
-				nil,
-				game.version,
-				event.occurred,
-			),
-			isNew,
-		)
+		player.GainResources(event.PickedResources)
 
-		// todo start play phase after last road has been built
+		err = game.updatePlayer(player)
+		if err != nil {
+			panic(err)
+		}
 	case PlayPhaseStartedEvent:
-		game.setState(NewGameStatePlay(game), event.occurred)
-
+		game.setState(NewGameStatePlay(game))
 	}
+}
+
+func (gameStatusInitialSetup *GameStateInitialSetup) checkAndMoveToPlayStateIfNeeded(occurred time.Time) bool {
+	game := gameStatusInitialSetup.game
+
+	for _, player := range game.Players() {
+		if !player.HasPlacedInitialBuildingsAndRoads() {
+			return false
+		}
+	}
+
+	game.Apply(
+		NewEventDescriptor(
+			game.Id(),
+			PlayPhaseStartedEvent{},
+			nil,
+			game.version,
+			occurred,
+		),
+		true,
+	)
+	game.state.EnterState(occurred)
+
+	return true
 }

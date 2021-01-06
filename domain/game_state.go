@@ -15,6 +15,9 @@ type GameState interface {
 	SetBoardGenerator(boardGenerator BoardGenerator) error
 	SetPlayersShuffler(playersShuffler PlayersShuffler) error
 
+	GenerateBoard(occurred time.Time) error
+	ShufflePlayers(occurred time.Time) error
+
 	AddPlayer(player Player, occurred time.Time) error
 	RemovePlayer(player Player, occurred time.Time) error
 
@@ -59,6 +62,14 @@ func (d GameStateDefault) SetBoardGenerator(BoardGenerator) error {
 }
 
 func (d GameStateDefault) SetPlayersShuffler(PlayersShuffler) error {
+	return CommandIsForbiddenErr
+}
+
+func (d GameStateDefault) GenerateBoard(time.Time) error {
+	return CommandIsForbiddenErr
+}
+
+func (d GameStateDefault) ShufflePlayers(time.Time) error {
 	return CommandIsForbiddenErr
 }
 

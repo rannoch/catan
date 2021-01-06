@@ -54,6 +54,10 @@ func (e EventDescriptor) Occurred() time.Time {
 	return e.occurred
 }
 
+type GameCreated struct {
+	GameId GameId
+}
+
 // todo before game started events
 
 type PlayerJoinedTheGameEvent struct {
@@ -73,24 +77,20 @@ type PlayersShufflerSelectedEvent struct {
 }
 
 /// In-game events
-type GameStartedEvent struct {
-	Occurred time.Time
-}
+type GameStartedEvent struct{}
 
 type BoardGeneratedEvent struct {
-	newBoard Board
+	NewBoard Board
 }
 
 type PlayersShuffledEvent struct {
-	playersInOrder []Color
+	PlayersInOrder []Color
 }
 
 type InitialSetupPhaseStartedEvent struct {
-	occurred time.Time
 }
 
 type PlayPhaseStartedEvent struct {
-	occurred time.Time
 }
 
 type PlayerRolledDiceEvent struct {
@@ -98,40 +98,37 @@ type PlayerRolledDiceEvent struct {
 }
 
 type PlayerPickedResourcesEvent struct {
-	playerColor     Color
-	pickedResources []resource
+	PlayerColor     Color
+	PickedResources []ResourceCard
 }
 
 type PlayerWasRobbedByRobberEvent struct {
 	robbedPlayerColor Color
-	dumpedResources   []resource
+	dumpedResources   []ResourceCard
 }
 
 type PlayerWasRobbedByPlayerEvent struct {
 	robbingPlayerColor Color
 	robbedPlayerColor  Color
-	dumpedResources    []resource
-}
-
-type PlayerFinishedHisTurnEvent struct {
-	playerColor Color
-	occurred    time.Time
+	dumpedResources    []ResourceCard
 }
 
 type PlayerStartedHisTurnEvent struct {
-	playerColor Color
-	occurred    time.Time
+	PlayerColor Color
+}
+
+type PlayerFinishedHisTurnEvent struct {
+	PlayerColor Color
 }
 
 type PlayerBuiltSettlementEvent struct {
-	playerColor       Color
-	intersectionCoord grid.IntersectionCoord
-	settlement        Settlement
+	PlayerColor       Color
+	IntersectionCoord grid.IntersectionCoord
+	Settlement        Settlement
 }
 
 type PlayerBuiltRoadEvent struct {
-	playerColor Color
-	pathCoord   grid.PathCoord
-	road        Road
-	occurred    time.Time
+	PlayerColor Color
+	PathCoord   grid.PathCoord
+	Road        Road
 }

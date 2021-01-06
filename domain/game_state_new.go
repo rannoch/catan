@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	BoardGeneratorIsNotSelected  = errors.New("board generator is not selected")
-	PlayersShufflerIsNotSelected = errors.New("players shuffler is not selected")
-	NoPlayersError               = errors.New("cannot start the game without players")
+	BoardGeneratorIsNotSelectedErr  = errors.New("board generator is not selected")
+	PlayersShufflerIsNotSelectedErr = errors.New("players shuffler is not selected")
+	NoPlayersErr                    = errors.New("cannot start the game without players")
 )
 
 type GameStateNew struct {
@@ -21,10 +21,6 @@ func NewGameStateNew(game *Game) *GameStateNew {
 }
 
 var _ GameState = (*GameStateNew)(nil)
-
-func (gameStateNew GameStateNew) EnterState(occurred time.Time) {
-	// todo if there are some
-}
 
 func (gameStateNew *GameStateNew) SetBoardGenerator(boardGenerator BoardGenerator) error {
 	gameStateNew.game.setBoardGenerator(boardGenerator)
@@ -40,7 +36,7 @@ func (gameStateNew GameStateNew) AddPlayer(player Player, occurred time.Time) er
 	// todo game is full condition
 
 	eventMessage := EventDescriptor{
-		id:       string(gameStateNew.game.Id()),
+		id:       gameStateNew.game.Id(),
 		event:    PlayerJoinedTheGameEvent{Player: player},
 		headers:  nil,
 		version:  gameStateNew.game.Version(),
@@ -54,7 +50,7 @@ func (gameStateNew GameStateNew) AddPlayer(player Player, occurred time.Time) er
 func (gameStateNew GameStateNew) RemovePlayer(player Player, occurred time.Time) error {
 	// todo
 	eventMessage := EventDescriptor{
-		id:       string(gameStateNew.game.Id()),
+		id:       gameStateNew.game.Id(),
 		event:    PlayerLeftTheGameEvent{Player: player},
 		headers:  nil,
 		version:  gameStateNew.game.Version(),
@@ -69,48 +65,40 @@ func (gameStateNew *GameStateNew) StartGame(occurred time.Time) error {
 	game := gameStateNew.game
 
 	if len(game.Players()) == 0 {
-		return NoPlayersError
+		return NoPlayersErr
 	}
 
 	if game.PlayersShuffler() == nil {
-		return PlayersShufflerIsNotSelected
+		return PlayersShufflerIsNotSelectedErr
 	}
 
 	if game.BoardGenerator() == nil {
-		return BoardGeneratorIsNotSelected
+		return BoardGeneratorIsNotSelectedErr
 	}
 
 	gameStartedEventMessage := NewEventDescriptor(
-		string(gameStateNew.game.Id()),
-		GameStartedEvent{Occurred: occurred},
+		game.Id(),
+		GameStartedEvent{},
 		nil,
-		gameStateNew.game.Version(),
+		game.Version(),
 		occurred,
 	)
 
-	gameStateNew.game.Apply(gameStartedEventMessage, true)
+	game.Apply(gameStartedEventMessage, true)
+	game.state.EnterState(occurred)
 
 	return nil
 }
 
 func (gameStateNew *GameStateNew) Apply(eventMessage EventMessage, _ bool) {
+	game := gameStateNew.game
+
 	switch event := eventMessage.Event().(type) {
 	case PlayerJoinedTheGameEvent:
-		if event.Player.color == None {
-			// set first available color
-			for _, color := range allColors {
-				_, err := gameStateNew.game.Player(color)
-				if err == PlayerNotExistsErr {
-					event.Player.SetColor(color)
-					break
-				}
-			}
-		}
-
-		gameStateNew.game.players[event.Player.color] = event.Player
+		game.addPlayer(event.Player)
 	case PlayerLeftTheGameEvent:
-		delete(gameStateNew.game.players, event.Player.color)
+		game.removePlayer(event.Player)
 	case GameStartedEvent:
-		gameStateNew.game.setState(NewGameStateStarted(gameStateNew.game), event.Occurred)
+		game.setState(NewGameStateStarted(game))
 	}
 }

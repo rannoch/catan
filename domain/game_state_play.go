@@ -22,7 +22,19 @@ func (gameStatePlay *GameStatePlay) StartGame(time.Time) error {
 }
 
 func (gameStatePlay *GameStatePlay) EnterState(occurred time.Time) {
-	// todo spread initial resources
+	game := gameStatePlay.game
+
+	playerStartedHisTurnEventMessage := NewEventDescriptor(
+		game.Id(),
+		PlayerStartedHisTurnEvent{
+			PlayerColor: game.TurnOrder()[0],
+		},
+		nil,
+		game.Version(),
+		occurred,
+	)
+
+	game.Apply(playerStartedHisTurnEventMessage, true)
 }
 
 func (gameStatePlay *GameStatePlay) BuildSettlement(playerColor Color, intersectionCoord grid.IntersectionCoord, settlement Settlement, occurred time.Time) error {
@@ -50,11 +62,11 @@ func (gameStatePlay *GameStatePlay) BuildSettlement(playerColor Color, intersect
 	}
 
 	playerBuiltSettlementEventMessage := NewEventDescriptor(
-		string(game.Id()),
+		game.Id(),
 		PlayerBuiltSettlementEvent{
-			playerColor:       playerColor,
-			intersectionCoord: intersectionCoord,
-			settlement:        settlement,
+			PlayerColor:       playerColor,
+			IntersectionCoord: intersectionCoord,
+			Settlement:        settlement,
 		},
 		nil,
 		game.Version(),
@@ -94,10 +106,10 @@ func (gameStatePlay *GameStatePlay) BuildRoad(playerColor Color, pathCoord grid.
 	}
 
 	gameStatePlay.Apply(
-		NewEventDescriptor(string(game.Id()), PlayerBuiltRoadEvent{
-			playerColor: playerColor,
-			pathCoord:   pathCoord,
-			road:        road,
+		NewEventDescriptor(game.Id(), PlayerBuiltRoadEvent{
+			PlayerColor: playerColor,
+			PathCoord:   pathCoord,
+			Road:        road,
 		}, nil, game.version, occurred,
 		),
 		true,
@@ -112,7 +124,6 @@ func (gameStatePlay *GameStatePlay) BuyDevelopmentCard(playerColor Color, card D
 
 func (gameStatePlay *GameStatePlay) EndTurn(playerColor Color, occurred time.Time) error {
 	panic("implement me")
-	return nil
 }
 
 func (gameStatePlay *GameStatePlay) CurrentTurn() Color {
@@ -128,19 +139,19 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 
 	switch event := eventMessage.Event().(type) {
 	case PlayerStartedHisTurnEvent:
-		game.currentTurn = event.playerColor
+		game.setCurrentTurn(event.PlayerColor)
 	case PlayerFinishedHisTurnEvent:
-		game.totalTurns++       // todo increment
-		game.currentTurn = None // todo setter
+		game.incrementTotalTurns()
+		game.setCurrentTurn(None)
 
 		// todo invoke next player start his turn
 	case PlayerBuiltSettlementEvent:
-		player, err := game.Player(event.playerColor)
+		player, err := game.Player(event.PlayerColor)
 		if err != nil {
 			panic(err)
 		}
 
-		player.victoryPoints += event.settlement.VictoryPoints()
+		player.victoryPoints += event.Settlement.VictoryPoints()
 		player.availableSettlements--
 
 		err = game.updatePlayer(player)
@@ -148,9 +159,9 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 			panic(err)
 		}
 
-		game.setBoard(game.Board().BuildSettlementOrCity(event.intersectionCoord, event.settlement))
+		game.setBoard(game.Board().BuildSettlementOrCity(event.IntersectionCoord, event.Settlement))
 	case PlayerBuiltRoadEvent:
-		player, err := game.Player(event.playerColor)
+		player, err := game.Player(event.PlayerColor)
 		if err != nil {
 			panic(err)
 		}
@@ -162,17 +173,21 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 			panic(err)
 		}
 
-		game.Board().BuildRoad(event.pathCoord, event.road)
+		game.Board().BuildRoad(event.PathCoord, event.Road)
 	case PlayerWasRobbedByRobberEvent:
 		// todo
 	case PlayerWasRobbedByPlayerEvent:
 	case PlayerPickedResourcesEvent:
-		player, err := game.Player(event.playerColor)
+		player, err := game.Player(event.PlayerColor)
 		if err != nil {
 			panic(err) // todo
 		}
 
-		player.GainResources(event.pickedResources)
+		player.GainResources(event.PickedResources)
+		err = game.updatePlayer(player)
+		if err != nil {
+			panic(err)
+		}
 	case PlayerRolledDiceEvent:
 		game.rollHistory = append(game.rollHistory, event.roll)
 	}
