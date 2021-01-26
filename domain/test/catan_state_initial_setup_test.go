@@ -62,6 +62,13 @@ func (simplePlayersShuffler) Shuffle(playerColors []domain.Color) []domain.Color
 	return playerColors
 }
 
+type gameCommand struct {
+	playerColor    domain.Color
+	coord          interface{}
+	buildingOrRoad interface{}
+	occurred       time.Time
+}
+
 var _ = Describe("Catan state initial setup", func() {
 	var (
 		game    *domain.Game
@@ -90,10 +97,11 @@ var _ = Describe("Catan state initial setup", func() {
 		Expect(game.StartGame(time.Now())).To(BeNil())
 	})
 
-	It("game should enter set-up phase", func() {
-		Expect(err).To(BeNil())
+	It("aggregate id should match", func() {
 		Expect(game.Id()).To(Equal("test_id"))
-		Expect(game.InState(&domain.GameStateInitialSetup{})).To(BeTrue())
+	})
+
+	Specify("turn order is right", func() {
 		Expect(game.TurnOrder()).To(Equal([]domain.Color{
 			domain.Blue,
 			domain.White,
@@ -104,14 +112,32 @@ var _ = Describe("Catan state initial setup", func() {
 			domain.White,
 			domain.Blue,
 		}))
-		Expect(game.Version()).To(Equal(int64(10)))
-		Expect(game.TotalTurns()).To(Equal(int64(0)))
+	})
+
+	Specify("turns order", func() {
 		Expect(game.CurrentTurn()).To(Equal(domain.Blue))
 		Expect(game.NextTurnColor()).To(Equal(domain.White))
+		Expect(game.TotalTurns()).To(Equal(int64(0)))
+	})
 
+	It("should have correct version", func() {
+		Expect(game.Version()).To(Equal(int64(10)))
+	})
+
+	Specify("no error", func() {
+		Expect(err).To(BeNil())
+	})
+
+	It("game should enter set-up phase", func() {
+		Expect(game.InState(&domain.GameStateInitialSetup{})).To(BeTrue())
+	})
+
+	Specify("player is added to the game", func() {
 		_, err := game.Player(domain.Red)
 		Expect(err).To(BeNil())
+	})
 
+	Specify("players available buildings are correct", func() {
 		for _, player := range game.Players() {
 			Expect(player.AvailableSettlements()).To(Equal(int64(5)))
 			Expect(player.AvailableCities()).To(Equal(int64(4)))
@@ -132,23 +158,18 @@ var _ = Describe("Catan state initial setup", func() {
 
 	When("first player builds an initial settlement", func() {
 		BeforeEach(func() {
-			Expect(game.BuildSettlement(
-				game.CurrentTurn(),
-				grid.IntersectionCoord{R: 3, C: 1, D: grid.R},
-				domain.NewSettlement(game.CurrentTurn()),
-				startGameCommandOccurred,
-			)).To(BeNil())
+			Expect(game.PlaceSettlement(game.CurrentTurn(), domain.NewSettlement(game.CurrentTurn(), grid.IntersectionCoord{R: 3, C: 1, D: grid.R}), startGameCommandOccurred)).To(BeNil())
 		})
 
 		It("board should have the settlement with right color", func() {
 			intersection, exists := game.Board().Intersection(grid.IntersectionCoord{R: 3, C: 1, D: grid.R})
 			Expect(exists).To(Equal(true))
-			Expect(intersection.Building()).To(Equal(domain.NewSettlement(domain.Blue)))
+			Expect(intersection.Building()).To(Equal(domain.NewSettlement(domain.Blue, grid.IntersectionCoord{R: 3, C: 1, D: grid.R})))
 		})
 
 		When("first player builds a legal road", func() {
 			BeforeEach(func() {
-				err = game.BuildRoad(
+				err = game.PlaceRoad(
 					game.CurrentTurn(),
 					grid.PathCoord{R: 3, C: 1, D: grid.E},
 					domain.NewRoad(game.CurrentTurn()),
@@ -166,7 +187,7 @@ var _ = Describe("Catan state initial setup", func() {
 
 		When("first player tries to build an illegal road", func() {
 			It("should receive an error", func() {
-				Expect(game.BuildRoad(
+				Expect(game.PlaceRoad(
 					game.CurrentTurn(),
 					grid.PathCoord{R: 1, C: 2, D: grid.E},
 					domain.NewRoad(game.CurrentTurn()),
@@ -184,19 +205,44 @@ var _ = Describe("Catan state initial setup", func() {
 
 		When("first player tries to build second settlement", func() {
 			It("should receive an error", func() {
-				Expect(game.BuildSettlement(
-					game.CurrentTurn(),
-					grid.IntersectionCoord{R: 3, C: 3, D: grid.R},
-					domain.NewSettlement(game.CurrentTurn()),
-					startGameCommandOccurred,
-				)).To(Equal(domain.CommandIsForbiddenErr))
+				Expect(game.PlaceSettlement(game.CurrentTurn(), domain.NewSettlement(game.CurrentTurn(), grid.IntersectionCoord{R: 3, C: 3, D: grid.R}), startGameCommandOccurred)).To(Equal(domain.CommandIsForbiddenErr))
 			})
 		})
 	})
 
-	When("first player tries to build road before building", func() {
+	When("current player tries to buy a settlement", func() {
 		It("should receive an error", func() {
-			Expect(game.BuildRoad(
+			Expect(game.BuySettlement(game.CurrentTurn(), time.Now())).To(Equal(domain.CommandIsForbiddenErr))
+		})
+	})
+
+	When("current player tries to buy a road", func() {
+		It("should receive an error", func() {
+			Expect(game.BuyRoad(game.CurrentTurn(), time.Now())).To(Equal(domain.CommandIsForbiddenErr))
+		})
+	})
+
+	When("current player tries to buy a city", func() {
+		It("should receive an error", func() {
+			Expect(game.BuyCity(game.CurrentTurn(), time.Now())).To(Equal(domain.CommandIsForbiddenErr))
+		})
+	})
+
+	When("current player tries to buy a development card", func() {
+		It("should receive an error", func() {
+			Expect(game.BuyDevelopmentCard(game.CurrentTurn(), domain.DevelopmentCard{})).To(Equal(domain.CommandIsForbiddenErr))
+		})
+	})
+
+	When("current player tries to roll a dice", func() {
+		It("should receive an error", func() {
+			Expect(game.RollDice(game.CurrentTurn(), time.Now())).To(Equal(domain.CommandIsForbiddenErr))
+		})
+	})
+
+	When("first player tries to place road before building", func() {
+		It("should receive an error", func() {
+			Expect(game.PlaceRoad(
 				game.CurrentTurn(),
 				grid.PathCoord{R: 3, C: 1, D: grid.W},
 				domain.NewRoad(game.CurrentTurn()),
@@ -212,40 +258,26 @@ var _ = Describe("Catan state initial setup", func() {
 		})
 	})
 
-	When("first player tries to build city", func() {
+	When("first player tries to place city", func() {
 		It("should receive an error", func() {
-
 		})
 	})
 
 	When("not first player tries to build settlement", func() {
 		It("should receive an error", func() {
-			err := game.BuildSettlement(
-				game.NextTurnColor(),
-				grid.IntersectionCoord{R: 3, C: 3, D: grid.R},
-				domain.NewSettlement(game.NextTurnColor()),
-				startGameCommandOccurred,
-			)
+			err := game.PlaceSettlement(game.NextTurnColor(), domain.NewSettlement(game.NextTurnColor(), grid.IntersectionCoord{R: 3, C: 3, D: grid.R}), startGameCommandOccurred)
 			Expect(err).To(Equal(domain.WrongTurnErr))
 		})
 	})
 
-	When("all players placed initial buildings", func() {
-		type gameCommand struct {
-			playerColor    domain.Color
-			coord          interface{}
-			buildingOrRoad interface{}
-			occurred       time.Time
-		}
-
+	Context("last player is to place second road", func() {
 		var gameCommands []gameCommand
 
 		BeforeEach(func() {
 			gameCommands = []gameCommand{
 				{
 					playerColor:    domain.Blue,
-					coord:          grid.IntersectionCoord{R: 3, C: 3, D: grid.R},
-					buildingOrRoad: domain.NewSettlement(domain.Blue),
+					buildingOrRoad: domain.NewSettlement(domain.Blue, grid.IntersectionCoord{R: 3, C: 3, D: grid.R}),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -256,8 +288,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.White,
-					coord:          grid.IntersectionCoord{R: 2, C: 3, D: grid.R},
-					buildingOrRoad: domain.NewSettlement(domain.White),
+					buildingOrRoad: domain.NewSettlement(domain.White, grid.IntersectionCoord{R: 2, C: 3, D: grid.R}),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -268,8 +299,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Red,
-					coord:          grid.IntersectionCoord{R: 0, C: 0, D: grid.R},
-					buildingOrRoad: domain.NewSettlement(domain.Red),
+					buildingOrRoad: domain.NewSettlement(domain.Red, grid.IntersectionCoord{R: 0, C: 0, D: grid.R}),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -280,8 +310,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Yellow,
-					coord:          grid.IntersectionCoord{R: 1, C: 3, D: grid.L},
-					buildingOrRoad: domain.NewSettlement(domain.Yellow),
+					buildingOrRoad: domain.NewSettlement(domain.Yellow, grid.IntersectionCoord{R: 1, C: 3, D: grid.L}),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -292,8 +321,203 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Yellow,
-					coord:          grid.IntersectionCoord{R: 3, C: 2, D: grid.R},
-					buildingOrRoad: domain.NewSettlement(domain.Yellow),
+					buildingOrRoad: domain.NewSettlement(domain.Yellow, grid.IntersectionCoord{R: 3, C: 2, D: grid.R}),
+					occurred:       startGameCommandOccurred,
+				},
+			}
+		})
+
+		JustBeforeEach(func() {
+			for _, gameCommand := range gameCommands {
+				switch gameCommand.buildingOrRoad.(type) {
+				case domain.Settlement:
+					err := game.PlaceSettlement(
+						gameCommand.playerColor,
+						gameCommand.buildingOrRoad.(domain.Settlement),
+						gameCommand.occurred,
+					)
+					Expect(err).To(BeNil())
+				case domain.Road:
+					err := game.PlaceRoad(
+						gameCommand.playerColor,
+						gameCommand.coord.(grid.PathCoord),
+						gameCommand.buildingOrRoad.(domain.Road),
+						gameCommand.occurred,
+					)
+					Expect(err).To(BeNil())
+				}
+			}
+		})
+
+		When("he tries to build a road connected to first settlement", func() {
+			It("should receive an error", func() {
+				Expect(game.PlaceRoad(
+					game.CurrentTurn(),
+					grid.PathCoord{R: 1, C: 3, D: grid.W},
+					domain.NewRoad(game.CurrentTurn()),
+					time.Now(),
+				)).To(Equal(domain.CommandIsForbiddenErr))
+			})
+		})
+		When("he tries to build a road connected to second settlement", func() {
+			It("should be ok", func() {
+				Expect(game.PlaceRoad(
+					game.CurrentTurn(),
+					grid.PathCoord{R: 4, C: 3, D: grid.N},
+					domain.NewRoad(game.CurrentTurn()),
+					time.Now(),
+				)).NotTo(HaveOccurred())
+			})
+		})
+	})
+
+	Context("last player is to place second settlement", func() {
+		var gameCommands []gameCommand
+
+		BeforeEach(func() {
+			gameCommands = []gameCommand{
+				{
+					playerColor:    domain.Blue,
+					buildingOrRoad: domain.NewSettlement(domain.Blue, grid.IntersectionCoord{R: 3, C: 3, D: grid.R}),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Blue,
+					coord:          grid.PathCoord{R: 3, C: 3, D: grid.E},
+					buildingOrRoad: domain.NewRoad(domain.Blue),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.White,
+					buildingOrRoad: domain.NewSettlement(domain.White, grid.IntersectionCoord{R: 2, C: 3, D: grid.R}),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.White,
+					coord:          grid.PathCoord{R: 2, C: 3, D: grid.E},
+					buildingOrRoad: domain.NewRoad(domain.White),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Red,
+					buildingOrRoad: domain.NewSettlement(domain.Red, grid.IntersectionCoord{R: 0, C: 0, D: grid.R}),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Red,
+					coord:          grid.PathCoord{R: 1, C: 1, D: grid.N},
+					buildingOrRoad: domain.NewRoad(domain.Red),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Yellow,
+					buildingOrRoad: domain.NewSettlement(domain.Yellow, grid.IntersectionCoord{R: 1, C: 3, D: grid.L}),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Yellow,
+					coord:          grid.PathCoord{R: 1, C: 2, D: grid.N},
+					buildingOrRoad: domain.NewRoad(domain.Yellow),
+					occurred:       startGameCommandOccurred,
+				},
+			}
+		})
+
+		JustBeforeEach(func() {
+			for _, gameCommand := range gameCommands {
+				switch gameCommand.buildingOrRoad.(type) {
+				case domain.Settlement:
+					err := game.PlaceSettlement(
+						gameCommand.playerColor,
+						gameCommand.buildingOrRoad.(domain.Settlement),
+						gameCommand.occurred,
+					)
+					Expect(err).NotTo(HaveOccurred())
+				case domain.Road:
+					err := game.PlaceRoad(
+						gameCommand.playerColor,
+						gameCommand.coord.(grid.PathCoord),
+						gameCommand.buildingOrRoad.(domain.Road),
+						gameCommand.occurred,
+					)
+					Expect(err).NotTo(HaveOccurred())
+				}
+			}
+		})
+
+		When("he tries to build a settlement in a legal spot", func() {
+			It("should be ok", func() {
+				Expect(game.PlaceSettlement(
+					game.CurrentTurn(),
+					domain.NewSettlement(game.CurrentTurn(), grid.IntersectionCoord{R: 3, C: 2, D: grid.R}),
+					time.Now(),
+				)).NotTo(HaveOccurred())
+			})
+		})
+
+		When("he tries to build a settlement that is too close to another settlement", func() {
+			It("should receive an error", func() {
+				Expect(game.PlaceSettlement(
+					game.CurrentTurn(),
+					domain.NewSettlement(game.CurrentTurn(), grid.IntersectionCoord{R: 1, C: 1, D: grid.L}),
+					time.Now(),
+				)).To(Equal(domain.CommandIsForbiddenErr))
+			})
+		})
+	})
+
+	When("all players placed initial buildings", func() {
+		var gameCommands []gameCommand
+
+		BeforeEach(func() {
+			gameCommands = []gameCommand{
+				{
+					playerColor:    domain.Blue,
+					buildingOrRoad: domain.NewSettlement(domain.Blue, grid.IntersectionCoord{R: 3, C: 3, D: grid.R}),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Blue,
+					coord:          grid.PathCoord{R: 3, C: 3, D: grid.E},
+					buildingOrRoad: domain.NewRoad(domain.Blue),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.White,
+					buildingOrRoad: domain.NewSettlement(domain.White, grid.IntersectionCoord{R: 2, C: 3, D: grid.R}),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.White,
+					coord:          grid.PathCoord{R: 2, C: 3, D: grid.E},
+					buildingOrRoad: domain.NewRoad(domain.White),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Red,
+					buildingOrRoad: domain.NewSettlement(domain.Red, grid.IntersectionCoord{R: 0, C: 0, D: grid.R}),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Red,
+					coord:          grid.PathCoord{R: 1, C: 1, D: grid.N},
+					buildingOrRoad: domain.NewRoad(domain.Red),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Yellow,
+					buildingOrRoad: domain.NewSettlement(domain.Yellow, grid.IntersectionCoord{R: 1, C: 3, D: grid.L}),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Yellow,
+					coord:          grid.PathCoord{R: 1, C: 2, D: grid.N},
+					buildingOrRoad: domain.NewRoad(domain.Yellow),
+					occurred:       startGameCommandOccurred,
+				},
+				{
+					playerColor:    domain.Yellow,
+					buildingOrRoad: domain.NewSettlement(domain.Yellow, grid.IntersectionCoord{R: 3, C: 2, D: grid.R}),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -304,8 +528,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Red,
-					coord:          grid.IntersectionCoord{R: 2, C: 0, D: grid.R},
-					buildingOrRoad: domain.NewSettlement(domain.Red),
+					buildingOrRoad: domain.NewSettlement(domain.Red, grid.IntersectionCoord{R: 2, C: 0, D: grid.R}),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -316,8 +539,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.White,
-					coord:          grid.IntersectionCoord{R: 1, C: 0, D: grid.R},
-					buildingOrRoad: domain.NewSettlement(domain.White),
+					buildingOrRoad: domain.NewSettlement(domain.White, grid.IntersectionCoord{R: 1, C: 0, D: grid.R}),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -328,8 +550,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Blue,
-					coord:          grid.IntersectionCoord{R: 3, C: 1, D: grid.R},
-					buildingOrRoad: domain.NewSettlement(domain.Blue),
+					buildingOrRoad: domain.NewSettlement(domain.Blue, grid.IntersectionCoord{R: 3, C: 1, D: grid.R}),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -345,18 +566,13 @@ var _ = Describe("Catan state initial setup", func() {
 			for _, gameCommand := range gameCommands {
 				switch gameCommand.buildingOrRoad.(type) {
 				case domain.Settlement:
-					Expect(game.BuildSettlement(
-						gameCommand.playerColor,
-						gameCommand.coord.(grid.IntersectionCoord),
-						gameCommand.buildingOrRoad.(domain.Settlement),
-						startGameCommandOccurred,
-					)).To(BeNil())
+					Expect(game.PlaceSettlement(gameCommand.playerColor, gameCommand.buildingOrRoad.(domain.Settlement), gameCommand.occurred)).To(BeNil())
 				case domain.Road:
-					Expect(game.BuildRoad(
+					Expect(game.PlaceRoad(
 						gameCommand.playerColor,
 						gameCommand.coord.(grid.PathCoord),
 						gameCommand.buildingOrRoad.(domain.Road),
-						startGameCommandOccurred,
+						gameCommand.occurred,
 					)).To(BeNil())
 				}
 			}

@@ -37,7 +37,7 @@ func (gameStatePlay *GameStatePlay) EnterState(occurred time.Time) {
 	game.Apply(playerStartedHisTurnEventMessage, true)
 }
 
-func (gameStatePlay *GameStatePlay) BuildSettlement(playerColor Color, intersectionCoord grid.IntersectionCoord, settlement Settlement, occurred time.Time) error {
+func (gameStatePlay *GameStatePlay) PlaceSettlement(playerColor Color, settlement Settlement, occurred time.Time) error {
 	game := gameStatePlay.game
 
 	player, err := game.Player(playerColor)
@@ -57,16 +57,11 @@ func (gameStatePlay *GameStatePlay) BuildSettlement(playerColor Color, intersect
 		return err
 	}
 
-	if err := game.Board().CanBuildSettlementOrCity(intersectionCoord, settlement); err != nil {
-		return err
-	}
-
 	playerBuiltSettlementEventMessage := NewEventDescriptor(
 		game.Id(),
-		PlayerBuiltSettlementEvent{
-			PlayerColor:       playerColor,
-			IntersectionCoord: intersectionCoord,
-			Settlement:        settlement,
+		PlayerPlacedSettlementEvent{
+			PlayerColor: playerColor,
+			Settlement:  settlement,
 		},
 		nil,
 		game.Version(),
@@ -78,7 +73,7 @@ func (gameStatePlay *GameStatePlay) BuildSettlement(playerColor Color, intersect
 	return nil
 }
 
-func (gameStatePlay *GameStatePlay) BuildRoad(playerColor Color, pathCoord grid.PathCoord, road Road, occurred time.Time) error {
+func (gameStatePlay *GameStatePlay) PlaceRoad(playerColor Color, pathCoord grid.PathCoord, road Road, occurred time.Time) error {
 	game := gameStatePlay.game
 
 	if game.CurrentTurn() != playerColor {
@@ -101,12 +96,12 @@ func (gameStatePlay *GameStatePlay) BuildRoad(playerColor Color, pathCoord grid.
 	}
 
 	// check if the board allowing to build
-	if err := game.Board().CanBuildRoad(pathCoord, road); err != nil {
+	if err := gameStatePlay.canBuildRoad(pathCoord, road); err != nil {
 		return err
 	}
 
 	gameStatePlay.Apply(
-		NewEventDescriptor(game.Id(), PlayerBuiltRoadEvent{
+		NewEventDescriptor(game.Id(), PlayerPlacedRoadEvent{
 			PlayerColor: playerColor,
 			PathCoord:   pathCoord,
 			Road:        road,
@@ -116,6 +111,78 @@ func (gameStatePlay *GameStatePlay) BuildRoad(playerColor Color, pathCoord grid.
 	)
 
 	return nil
+}
+
+func (gameStatePlay *GameStatePlay) canBuildRoad(pathCoord grid.PathCoord, road Road) error {
+	game := gameStatePlay.game
+
+	path, exists := game.Board().Path(pathCoord)
+	if !exists {
+		return BadPathCoordErr
+	}
+
+	if !path.IsEmpty() {
+		return BadPathCoordErr
+	}
+
+	// check if road is adjacent to existing and doesn't cross the building
+	canBuildRoad := false
+
+	adjacentIntersections := game.Board().PathAdjacentIntersections(pathCoord)
+	for _, adjacentIntersectionCoord := range adjacentIntersections {
+		intersection, exists := game.Board().Intersection(adjacentIntersectionCoord)
+		if !exists {
+			continue
+		}
+
+		if intersection.building == nil {
+			continue
+		}
+
+		if intersection.building.Color() == road.color {
+			canBuildRoad = true
+			break
+		}
+	}
+
+	if canBuildRoad {
+		return nil
+	}
+
+	adjacentPaths := game.Board().PathAdjacentPaths(pathCoord)
+	for _, adjacentPathCoord := range adjacentPaths {
+		adjacentPath, exists := game.Board().Path(adjacentPathCoord)
+		if !exists {
+			continue
+		}
+
+		if !adjacentPath.IsEmpty() {
+			continue
+		}
+
+		jointIntersectionCoord, found := game.Board().PathsJointIntersection(pathCoord, adjacentPathCoord)
+		if !found {
+			continue
+		}
+
+		intersection, exists := game.Board().Intersection(jointIntersectionCoord)
+		if exists {
+			continue
+		}
+
+		if !intersection.IsEmpty() && intersection.building.Color() != road.color {
+			continue
+		}
+
+		canBuildRoad = true
+		break
+	}
+
+	if canBuildRoad {
+		return nil
+	}
+
+	return CommandIsForbiddenErr
 }
 
 func (gameStatePlay *GameStatePlay) BuyDevelopmentCard(playerColor Color, card DevelopmentCard) error {
@@ -145,7 +212,7 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 		game.setCurrentTurn(None)
 
 		// todo invoke next player start his turn
-	case PlayerBuiltSettlementEvent:
+	case PlayerPlacedSettlementEvent:
 		player, err := game.Player(event.PlayerColor)
 		if err != nil {
 			panic(err)
@@ -159,8 +226,8 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 			panic(err)
 		}
 
-		game.setBoard(game.Board().BuildSettlementOrCity(event.IntersectionCoord, event.Settlement))
-	case PlayerBuiltRoadEvent:
+		game.Board().PlaceSettlementOrCity(event.Settlement)
+	case PlayerPlacedRoadEvent:
 		player, err := game.Player(event.PlayerColor)
 		if err != nil {
 			panic(err)
@@ -189,6 +256,6 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 			panic(err)
 		}
 	case PlayerRolledDiceEvent:
-		game.rollHistory = append(game.rollHistory, event.roll)
+		game.rollHistory = append(game.rollHistory, event.Roll)
 	}
 }

@@ -13,7 +13,20 @@ package grid
 //  \ _ _ / (2,4) \ _ _ /
 //        \       /
 //         \ _ _ /
+type HexagonGridCalculator interface {
+	IntersectionAdjacentHexes(intersectionCoord IntersectionCoord) []HexCoord
+	IntersectionAdjacentPaths(intersectionCoord IntersectionCoord) []PathCoord
+	IntersectionAdjacentIntersections(intersectionCoord IntersectionCoord) []IntersectionCoord
+	HexAdjacentIntersections(hexCoord HexCoord) []IntersectionCoord
+	HexAdjacentPaths(hexCoord HexCoord) []PathCoord
+	PathAdjacentIntersections(pathCoord PathCoord) []IntersectionCoord
+	PathAdjacentPaths(pathCoord PathCoord) []PathCoord
+	PathsJointIntersection(pathCoord1, pathCoord2 PathCoord) (IntersectionCoord, bool)
+}
+
 type HexagonGridWithOffsetCoordsCalculator struct{}
+
+var _ HexagonGridCalculator = HexagonGridWithOffsetCoordsCalculator{}
 
 func (h HexagonGridWithOffsetCoordsCalculator) IntersectionAdjacentHexes(intersectionCoord IntersectionCoord) []HexCoord {
 	if intersectionCoord.D == L {
@@ -43,8 +56,26 @@ func (h HexagonGridWithOffsetCoordsCalculator) IntersectionAdjacentPaths(interse
 	} else if intersectionCoord.D == R {
 		return []PathCoord{
 			{R: intersectionCoord.R, C: intersectionCoord.C, D: E},
-			{R: intersectionCoord.R + 1, C: intersectionCoord.C, D: N},
-			{R: intersectionCoord.R + 1, C: intersectionCoord.C, D: W},
+			{R: intersectionCoord.R + 1, C: intersectionCoord.C + 1, D: N},
+			{R: intersectionCoord.R + 1, C: intersectionCoord.C + 1, D: W},
+		}
+	}
+
+	return nil
+}
+
+func (h HexagonGridWithOffsetCoordsCalculator) IntersectionAdjacentIntersections(intersectionCoord IntersectionCoord) []IntersectionCoord {
+	if intersectionCoord.D == R {
+		return []IntersectionCoord{
+			{R: intersectionCoord.R, C: intersectionCoord.C + 1, D: L},
+			{R: intersectionCoord.R + 1, C: intersectionCoord.C + 2, D: L},
+			{R: intersectionCoord.R + 1, C: intersectionCoord.C + 1, D: L},
+		}
+	} else if intersectionCoord.D == L {
+		return []IntersectionCoord{
+			{R: intersectionCoord.R - 1, C: intersectionCoord.C - 2, D: R},
+			{R: intersectionCoord.R - 1, C: intersectionCoord.C - 1, D: R},
+			{R: intersectionCoord.R, C: intersectionCoord.C - 1, D: R},
 		}
 	}
 

@@ -34,17 +34,19 @@ func (gameStateStarted *GameStateStarted) EnterState(occurred time.Time) {
 	)
 
 	game.Apply(initialSetupPhaseStartedEventMessage, true)
-	game.state.EnterState(occurred)
+	game.currentState.EnterState(occurred)
 }
 
 func (gameStateStarted GameStateStarted) Apply(eventMessage EventMessage, _ bool) {
+	game := gameStateStarted.game
+
 	switch event := eventMessage.Event().(type) {
 	case BoardGeneratedEvent:
-		gameStateStarted.game.setBoard(event.NewBoard)
+		game.setBoard(event.NewBoard)
 	case PlayersShuffledEvent:
-		gameStateStarted.game.setTurnOrder(event.PlayersInOrder)
+		game.setTurnOrder(event.PlayersInOrder)
 	case InitialSetupPhaseStartedEvent:
-		gameStateStarted.game.setState(NewGameStateInitialSetup(gameStateStarted.game))
+		game.setState(game.stateInitialSetup)
 	}
 }
 

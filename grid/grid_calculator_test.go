@@ -110,14 +110,14 @@ func TestHexagonGridWithOffsetCoords_VertexAdjacentEdges(t *testing.T) {
 			},
 		},
 		{
-			name: "",
+			name: "looking adjacent paths for intersection (0,0,R), should be (0,0,E),(1,1,N),(1,1,W)",
 			args: args{
-				intersectionCoord: IntersectionCoord{R: 0, C: 3, D: R},
+				intersectionCoord: IntersectionCoord{R: 0, C: 0, D: R},
 			},
 			want: []PathCoord{
-				{R: 0, C: 3, D: E},
-				{R: 1, C: 3, D: N},
-				{R: 1, C: 3, D: W},
+				{R: 0, C: 0, D: E},
+				{R: 1, C: 1, D: N},
+				{R: 1, C: 1, D: W},
 			},
 		},
 	}
@@ -337,6 +337,50 @@ func TestHexagonGridWithOffsetCoordsCalculator_PathsJointIntersection(t *testing
 
 			assert.Equal(t, tt.want.intersectionCoord, intersection)
 			assert.Equal(t, tt.want.found, found)
+		})
+	}
+}
+
+func TestHexagonGridWithOffsetCoordsCalculator_IntersectionAdjacentIntersections(t *testing.T) {
+	type args struct {
+		intersectionCoord IntersectionCoord
+	}
+	tests := []struct {
+		name string
+		args args
+		want []IntersectionCoord
+	}{
+		{
+			name: "R",
+			args: args{
+				intersectionCoord: IntersectionCoord{R: 0, C: 0, D: R},
+			},
+			want: []IntersectionCoord{
+				{R: 0, C: 1, D: L},
+				{R: 1, C: 2, D: L},
+				{R: 1, C: 1, D: L},
+			},
+		},
+		{
+			name: "L",
+			args: args{
+				intersectionCoord: IntersectionCoord{R: 1, C: 1, D: L},
+			},
+			want: []IntersectionCoord{
+				{R: 0, C: -1, D: R},
+				{R: 0, C: 0, D: R},
+				{R: 1, C: 0, D: R},
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+
+		t.Run(tt.name, func(t *testing.T) {
+			h := HexagonGridWithOffsetCoordsCalculator{}
+			if got := h.IntersectionAdjacentIntersections(tt.args.intersectionCoord); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("IntersectionAdjacentIntersections() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

@@ -85,7 +85,7 @@ func (gameStateNew *GameStateNew) StartGame(occurred time.Time) error {
 	)
 
 	game.Apply(gameStartedEventMessage, true)
-	game.state.EnterState(occurred)
+	game.currentState.EnterState(occurred)
 
 	return nil
 }
@@ -99,6 +99,6 @@ func (gameStateNew *GameStateNew) Apply(eventMessage EventMessage, _ bool) {
 	case PlayerLeftTheGameEvent:
 		game.removePlayer(event.Player)
 	case GameStartedEvent:
-		game.setState(NewGameStateStarted(game))
+		game.setState(game.stateStarted)
 	}
 }

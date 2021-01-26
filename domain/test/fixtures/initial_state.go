@@ -46,12 +46,11 @@ var JustAfterInitialStateEvents = []interface{}{
 	domain.InitialSetupPhaseStartedEvent{},
 
 	domain.PlayerStartedHisTurnEvent{PlayerColor: domain.Blue},
-	domain.PlayerBuiltSettlementEvent{
-		PlayerColor:       domain.Blue,
-		IntersectionCoord: grid.IntersectionCoord{R: 3, C: 3, D: grid.R},
-		Settlement:        domain.NewSettlement(domain.Blue),
+	domain.PlayerPlacedSettlementEvent{
+		PlayerColor: domain.Blue,
+		Settlement:  domain.NewSettlement(domain.Blue, grid.IntersectionCoord{R: 3, C: 3, D: grid.R}),
 	},
-	domain.PlayerBuiltRoadEvent{
+	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Blue,
 		PathCoord:   grid.PathCoord{R: 3, C: 3, D: grid.E},
 		Road:        domain.NewRoad(domain.Blue),
@@ -59,12 +58,11 @@ var JustAfterInitialStateEvents = []interface{}{
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Blue},
 
 	domain.PlayerStartedHisTurnEvent{PlayerColor: domain.White},
-	domain.PlayerBuiltSettlementEvent{
-		PlayerColor:       domain.White,
-		IntersectionCoord: grid.IntersectionCoord{R: 2, C: 3, D: grid.R},
-		Settlement:        domain.NewSettlement(domain.White),
+	domain.PlayerPlacedSettlementEvent{
+		PlayerColor: domain.White,
+		Settlement:  domain.NewSettlement(domain.White, grid.IntersectionCoord{R: 2, C: 3, D: grid.R}),
 	},
-	domain.PlayerBuiltRoadEvent{
+	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.White,
 		PathCoord:   grid.PathCoord{R: 2, C: 3, D: grid.E},
 		Road:        domain.NewRoad(domain.White),
@@ -72,12 +70,11 @@ var JustAfterInitialStateEvents = []interface{}{
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.White},
 
 	domain.PlayerStartedHisTurnEvent{PlayerColor: domain.Red},
-	domain.PlayerBuiltSettlementEvent{
-		PlayerColor:       domain.Red,
-		IntersectionCoord: grid.IntersectionCoord{R: 0, C: 0, D: grid.R},
-		Settlement:        domain.NewSettlement(domain.Red),
+	domain.PlayerPlacedSettlementEvent{
+		PlayerColor: domain.Red,
+		Settlement:  domain.NewSettlement(domain.Red, grid.IntersectionCoord{R: 0, C: 0, D: grid.R}),
 	},
-	domain.PlayerBuiltRoadEvent{
+	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Red,
 		PathCoord:   grid.PathCoord{R: 1, C: 1, D: grid.N},
 		Road:        domain.NewRoad(domain.Red),
@@ -85,12 +82,11 @@ var JustAfterInitialStateEvents = []interface{}{
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Red},
 
 	domain.PlayerStartedHisTurnEvent{PlayerColor: domain.Yellow},
-	domain.PlayerBuiltSettlementEvent{
-		PlayerColor:       domain.Yellow,
-		IntersectionCoord: grid.IntersectionCoord{R: 1, C: 3, D: grid.L},
-		Settlement:        domain.NewSettlement(domain.Yellow),
+	domain.PlayerPlacedSettlementEvent{
+		PlayerColor: domain.Yellow,
+		Settlement:  domain.NewSettlement(domain.Yellow, grid.IntersectionCoord{R: 1, C: 3, D: grid.L}),
 	},
-	domain.PlayerBuiltRoadEvent{
+	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Yellow,
 		PathCoord:   grid.PathCoord{R: 1, C: 2, D: grid.N},
 		Road:        domain.NewRoad(domain.Yellow),
@@ -98,16 +94,15 @@ var JustAfterInitialStateEvents = []interface{}{
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Yellow},
 
 	domain.PlayerStartedHisTurnEvent{PlayerColor: domain.Yellow},
-	domain.PlayerBuiltSettlementEvent{
-		PlayerColor:       domain.Yellow,
-		IntersectionCoord: grid.IntersectionCoord{R: 3, C: 2, D: grid.R},
-		Settlement:        domain.NewSettlement(domain.Yellow),
+	domain.PlayerPlacedSettlementEvent{
+		PlayerColor: domain.Yellow,
+		Settlement:  domain.NewSettlement(domain.Yellow, grid.IntersectionCoord{R: 3, C: 2, D: grid.R}),
 	},
 	domain.PlayerPickedResourcesEvent{
 		PlayerColor:     domain.Yellow,
 		PickedResources: []domain.ResourceCard{domain.ResourceCardOre, domain.ResourceCardWheat, domain.ResourceCardWheat},
 	},
-	domain.PlayerBuiltRoadEvent{
+	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Yellow,
 		PathCoord:   grid.PathCoord{R: 4, C: 3, D: grid.N},
 		Road:        domain.NewRoad(domain.Yellow),
@@ -115,16 +110,15 @@ var JustAfterInitialStateEvents = []interface{}{
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Yellow},
 
 	domain.PlayerStartedHisTurnEvent{PlayerColor: domain.Red},
-	domain.PlayerBuiltSettlementEvent{
-		PlayerColor:       domain.Red,
-		IntersectionCoord: grid.IntersectionCoord{R: 2, C: 0, D: grid.R},
-		Settlement:        domain.NewSettlement(domain.Red),
+	domain.PlayerPlacedSettlementEvent{
+		PlayerColor: domain.Red,
+		Settlement:  domain.NewSettlement(domain.Red, grid.IntersectionCoord{R: 2, C: 0, D: grid.R}),
 	},
 	domain.PlayerPickedResourcesEvent{
 		PlayerColor:     domain.Red,
 		PickedResources: []domain.ResourceCard{domain.ResourceCardWheat, domain.ResourceCardWood, domain.ResourceCardWood},
 	},
-	domain.PlayerBuiltRoadEvent{
+	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Red,
 		PathCoord:   grid.PathCoord{R: 3, C: 1, D: grid.N},
 		Road:        domain.NewRoad(domain.Red),
@@ -132,16 +126,15 @@ var JustAfterInitialStateEvents = []interface{}{
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Red},
 
 	domain.PlayerStartedHisTurnEvent{PlayerColor: domain.White},
-	domain.PlayerBuiltSettlementEvent{
-		PlayerColor:       domain.White,
-		IntersectionCoord: grid.IntersectionCoord{R: 1, C: 0, D: grid.R},
-		Settlement:        domain.NewSettlement(domain.White),
+	domain.PlayerPlacedSettlementEvent{
+		PlayerColor: domain.White,
+		Settlement:  domain.NewSettlement(domain.White, grid.IntersectionCoord{R: 1, C: 0, D: grid.R}),
 	},
 	domain.PlayerPickedResourcesEvent{
 		PlayerColor:     domain.White,
 		PickedResources: []domain.ResourceCard{domain.ResourceCardWheat, domain.ResourceCardBrick, domain.ResourceCardWood},
 	},
-	domain.PlayerBuiltRoadEvent{
+	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.White,
 		PathCoord:   grid.PathCoord{R: 2, C: 1, D: grid.W},
 		Road:        domain.NewRoad(domain.White),
@@ -149,16 +142,15 @@ var JustAfterInitialStateEvents = []interface{}{
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.White},
 
 	domain.PlayerStartedHisTurnEvent{PlayerColor: domain.Blue},
-	domain.PlayerBuiltSettlementEvent{
-		PlayerColor:       domain.Blue,
-		IntersectionCoord: grid.IntersectionCoord{R: 3, C: 1, D: grid.R},
-		Settlement:        domain.NewSettlement(domain.Blue),
+	domain.PlayerPlacedSettlementEvent{
+		PlayerColor: domain.Blue,
+		Settlement:  domain.NewSettlement(domain.Blue, grid.IntersectionCoord{R: 3, C: 1, D: grid.R}),
 	},
 	domain.PlayerPickedResourcesEvent{
 		PlayerColor:     domain.Blue,
 		PickedResources: []domain.ResourceCard{domain.ResourceCardWood, domain.ResourceCardOre, domain.ResourceCardBrick},
 	},
-	domain.PlayerBuiltRoadEvent{
+	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Blue,
 		PathCoord:   grid.PathCoord{R: 4, C: 2, D: grid.N},
 		Road:        domain.NewRoad(domain.Blue),

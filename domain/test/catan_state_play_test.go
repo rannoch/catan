@@ -1,8 +1,9 @@
 package test_test
 
 import (
-	"github.com/rannoch/catan/domain/test/fixtures"
 	"time"
+
+	"github.com/rannoch/catan/domain/test/fixtures"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -61,4 +62,5 @@ var _ = Describe("Catan state play", func() {
 			Expect(player.AvailableRoads()).To(Equal(int64(13)))
 		}
 	})
+
 })

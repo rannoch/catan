@@ -6,7 +6,7 @@ linters:
   enable:
     - errcheck
     - goimports
-    - golint
+#    - golint
     - govet
     - staticcheck
 

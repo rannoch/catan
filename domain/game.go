@@ -24,7 +24,7 @@ var (
 	WrongTurnErr = errors.New("wrong turn")
 )
 
-type roll struct {
+type Roll struct {
 	Roller Color
 	Roll   int64
 }
@@ -36,12 +36,17 @@ type Game struct {
 	players map[Color]Player
 	board   Board
 
-	state GameState
+	stateNew          GameState
+	stateStarted      GameState
+	stateInitialSetup GameState
+	statePlay         GameState
+
+	currentState GameState
 
 	turnOrder   []Color
 	currentTurn Color
 	totalTurns  int64
-	rollHistory []roll
+	rollHistory []Roll
 
 	// set-up phase
 
@@ -69,55 +74,68 @@ func NewGame(id GameId, occurred time.Time) *Game {
 }
 
 func (game *Game) AddPlayer(player Player, occurred time.Time) error {
-	return game.state.AddPlayer(player, occurred)
+	return game.currentState.AddPlayer(player, occurred)
 }
 
 func (game *Game) SetBoardGenerator(boardGenerator BoardGenerator) error {
-	return game.state.SetBoardGenerator(boardGenerator)
+	return game.currentState.SetBoardGenerator(boardGenerator)
 }
 
 func (game *Game) SetPlayersShuffler(playersShuffler PlayersShuffler) error {
-	return game.state.SetPlayersShuffler(playersShuffler)
+	return game.currentState.SetPlayersShuffler(playersShuffler)
 }
 
 func (game *Game) GenerateBoard(occurred time.Time) error {
-	return game.state.GenerateBoard(occurred)
+	return game.currentState.GenerateBoard(occurred)
 }
 
 func (game *Game) ShufflePlayers(occurred time.Time) error {
-	return game.state.ShufflePlayers(occurred)
+	return game.currentState.ShufflePlayers(occurred)
 }
 
 func (game *Game) StartGame(
 	occurred time.Time,
 ) error {
-	return game.state.StartGame(occurred)
+	return game.currentState.StartGame(occurred)
 }
 
-func (game *Game) BuildSettlement(
-	playerColor Color,
-	intersectionCoord grid.IntersectionCoord,
-	settlement Settlement,
-	occurred time.Time,
-) error {
-	return game.state.BuildSettlement(
-		playerColor, intersectionCoord, settlement, occurred,
-	)
+func (game *Game) BuyRoad(playerColor Color, occurred time.Time) error {
+	return game.currentState.BuyRoad(playerColor, occurred)
 }
 
-func (game *Game) BuildRoad(
+func (game *Game) BuySettlement(playerColor Color, occurred time.Time) error {
+	return game.currentState.BuySettlement(playerColor, occurred)
+}
+
+func (game *Game) BuyCity(playerColor Color, occurred time.Time) error {
+	return game.currentState.BuyCity(playerColor, occurred)
+}
+
+func (game *Game) BuyDevelopmentCard(playerColor Color, devCard DevelopmentCard) error {
+	return game.currentState.BuyDevelopmentCard(playerColor, devCard)
+}
+
+func (game *Game) PlaceSettlement(playerColor Color, settlement Settlement, occurred time.Time) error {
+	return game.currentState.PlaceSettlement(playerColor, settlement, occurred)
+}
+
+func (game *Game) PlaceRoad(
 	playerColor Color,
 	pathCoord grid.PathCoord,
 	road Road,
 	occurred time.Time,
 ) error {
-	return game.state.BuildRoad(
+	return game.currentState.PlaceRoad(
 		playerColor, pathCoord, road, occurred,
 	)
 }
 
+func (game *Game) RollDice(playerColor Color, occurred time.Time) error {
+	return game.currentState.RollDice(playerColor, occurred)
+}
+
 func (game *Game) EndTurn(playerColor Color, occurred time.Time) error {
-	return game.state.EndTurn(playerColor, occurred)
+	return game.currentState.EndTurn(playerColor, occurred)
 }
 
 func (game *Game) Apply(eventMessage EventMessage, isNew bool) {
@@ -129,10 +147,18 @@ func (game *Game) Apply(eventMessage EventMessage, isNew bool) {
 
 	switch event := eventMessage.Event().(type) {
 	case GameCreated:
+		gameStatePlayerIsToPlaceSettlement := NewGameStatePlayerIsToPlaceSettlement(game)
+		gameStatePlayerIsToPlaceRoad := NewGameStatePlayerIsToPlaceRoad(game)
+
 		game.id = event.GameId
-		game.setState(NewGameStateNew(game))
+		game.stateNew = NewGameStateNew(game)
+		game.stateStarted = NewGameStateStarted(game)
+		game.stateInitialSetup = NewGameStateInitialSetup(game, gameStatePlayerIsToPlaceSettlement, gameStatePlayerIsToPlaceRoad)
+		game.statePlay = NewGameStatePlay(game)
+
+		game.setState(game.stateNew)
 	default:
-		game.state.Apply(eventMessage, isNew)
+		game.currentState.Apply(eventMessage, isNew)
 	}
 }
 
@@ -177,7 +203,11 @@ func (game Game) Changes() []EventMessage {
 	return game.changes
 }
 
-func (game Game) RollHistory() []roll {
+func (game Game) LastEvent() interface{} {
+	return game.Changes()[len(game.Changes())-1].Event()
+}
+
+func (game Game) RollHistory() []Roll {
 	return game.rollHistory
 }
 
@@ -196,15 +226,15 @@ func (game Game) NextTurnColor() Color {
 }
 
 func (game *Game) TurnOrder() []Color {
-	return game.state.TurnOrder()
+	return game.currentState.TurnOrder()
 }
 
 func (game Game) State() GameState {
-	return game.state
+	return game.currentState
 }
 
 func (game Game) InState(state GameState) bool {
-	return reflect.TypeOf(state) == reflect.TypeOf(game.state)
+	return reflect.TypeOf(state) == reflect.TypeOf(game.currentState)
 }
 
 func (game *Game) PlayersShuffler() PlayersShuffler {
@@ -271,7 +301,7 @@ func (game *Game) setBoard(board Board) {
 }
 
 func (game *Game) setState(state GameState) {
-	game.state = state
+	game.currentState = state
 }
 
 func (game *Game) setTurnOrder(turnOrder []Color) {

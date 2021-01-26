@@ -23,18 +23,23 @@ type GameState interface {
 
 	StartGame(occurred time.Time) error
 
-	BuildSettlement(
-		playerColor Color,
-		intersectionCoord grid.IntersectionCoord,
-		settlement Settlement,
-		occurred time.Time,
-	) error
-	BuildRoad(
+	RollDice(playerColor Color, occurred time.Time) error
+
+	BuyRoad(playerColor Color, occurred time.Time) error
+
+	BuySettlement(playerColor Color, occurred time.Time) error
+
+	BuyCity(playerColor Color, occurred time.Time) error
+
+	PlaceSettlement(playerColor Color, settlement Settlement, occurred time.Time) error
+
+	PlaceRoad(
 		playerColor Color,
 		pathCoord grid.PathCoord,
 		road Road,
 		occurred time.Time,
 	) error
+
 	BuyDevelopmentCard(playerColor Color, card DevelopmentCard) error
 
 	TurnOrder() []Color
@@ -77,11 +82,27 @@ func (GameStateDefault) StartGame(time.Time) error {
 	return CommandIsForbiddenErr
 }
 
-func (GameStateDefault) BuildSettlement(Color, grid.IntersectionCoord, Settlement, time.Time) error {
+func (GameStateDefault) RollDice(Color, time.Time) error {
 	return CommandIsForbiddenErr
 }
 
-func (GameStateDefault) BuildRoad(Color, grid.PathCoord, Road, time.Time) error {
+func (GameStateDefault) BuyRoad(Color, time.Time) error {
+	return CommandIsForbiddenErr
+}
+
+func (GameStateDefault) BuySettlement(Color, time.Time) error {
+	return CommandIsForbiddenErr
+}
+
+func (GameStateDefault) BuyCity(Color, time.Time) error {
+	return CommandIsForbiddenErr
+}
+
+func (GameStateDefault) PlaceSettlement(Color, Settlement, time.Time) error {
+	return CommandIsForbiddenErr
+}
+
+func (GameStateDefault) PlaceRoad(Color, grid.PathCoord, Road, time.Time) error {
 	return CommandIsForbiddenErr
 }
 

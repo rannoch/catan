@@ -94,7 +94,7 @@ type PlayPhaseStartedEvent struct {
 }
 
 type PlayerRolledDiceEvent struct {
-	roll roll
+	Roll Roll
 }
 
 type PlayerPickedResourcesEvent struct {
@@ -121,13 +121,12 @@ type PlayerFinishedHisTurnEvent struct {
 	PlayerColor Color
 }
 
-type PlayerBuiltSettlementEvent struct {
-	PlayerColor       Color
-	IntersectionCoord grid.IntersectionCoord
-	Settlement        Settlement
+type PlayerPlacedSettlementEvent struct {
+	PlayerColor Color
+	Settlement  Settlement
 }
 
-type PlayerBuiltRoadEvent struct {
+type PlayerPlacedRoadEvent struct {
 	PlayerColor Color
 	PathCoord   grid.PathCoord
 	Road        Road
