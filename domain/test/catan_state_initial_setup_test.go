@@ -64,7 +64,6 @@ func (simplePlayersShuffler) Shuffle(playerColors []domain.Color) []domain.Color
 
 type gameCommand struct {
 	playerColor    domain.Color
-	coord          interface{}
 	buildingOrRoad interface{}
 	occurred       time.Time
 }
@@ -169,12 +168,7 @@ var _ = Describe("Catan state initial setup", func() {
 
 		When("first player builds a legal road", func() {
 			BeforeEach(func() {
-				err = game.PlaceRoad(
-					game.CurrentTurn(),
-					grid.PathCoord{R: 3, C: 1, D: grid.E},
-					domain.NewRoad(game.CurrentTurn()),
-					time.Now(),
-				)
+				err = game.PlaceRoad(game.CurrentTurn(), domain.NewRoad(grid.PathCoord{R: 3, C: 1, D: grid.E}, game.CurrentTurn()), time.Now())
 			})
 
 			It("board should have the road with right color ", func() {
@@ -187,12 +181,7 @@ var _ = Describe("Catan state initial setup", func() {
 
 		When("first player tries to build an illegal road", func() {
 			It("should receive an error", func() {
-				Expect(game.PlaceRoad(
-					game.CurrentTurn(),
-					grid.PathCoord{R: 1, C: 2, D: grid.E},
-					domain.NewRoad(game.CurrentTurn()),
-					time.Now(),
-				)).To(Equal(domain.CommandIsForbiddenErr))
+				Expect(game.PlaceRoad(game.CurrentTurn(), domain.NewRoad(grid.PathCoord{R: 1, C: 2, D: grid.E}, game.CurrentTurn()), time.Now())).To(Equal(domain.CommandIsForbiddenErr))
 			})
 		})
 
@@ -242,12 +231,7 @@ var _ = Describe("Catan state initial setup", func() {
 
 	When("first player tries to place road before building", func() {
 		It("should receive an error", func() {
-			Expect(game.PlaceRoad(
-				game.CurrentTurn(),
-				grid.PathCoord{R: 3, C: 1, D: grid.W},
-				domain.NewRoad(game.CurrentTurn()),
-				time.Now(),
-			)).To(Equal(domain.CommandIsForbiddenErr))
+			Expect(game.PlaceRoad(game.CurrentTurn(), domain.NewRoad(grid.PathCoord{R: 3, C: 1, D: grid.W}, game.CurrentTurn()), time.Now())).To(Equal(domain.CommandIsForbiddenErr))
 		})
 	})
 
@@ -282,8 +266,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Blue,
-					coord:          grid.PathCoord{R: 3, C: 3, D: grid.E},
-					buildingOrRoad: domain.NewRoad(domain.Blue),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 3, C: 3, D: grid.E}, domain.Blue),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -293,8 +276,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.White,
-					coord:          grid.PathCoord{R: 2, C: 3, D: grid.E},
-					buildingOrRoad: domain.NewRoad(domain.White),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 2, C: 3, D: grid.E}, domain.White),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -304,8 +286,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Red,
-					coord:          grid.PathCoord{R: 1, C: 1, D: grid.N},
-					buildingOrRoad: domain.NewRoad(domain.Red),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 1, C: 1, D: grid.N}, domain.Red),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -315,8 +296,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Yellow,
-					coord:          grid.PathCoord{R: 1, C: 2, D: grid.N},
-					buildingOrRoad: domain.NewRoad(domain.Yellow),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 1, C: 2, D: grid.N}, domain.Yellow),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -338,12 +318,7 @@ var _ = Describe("Catan state initial setup", func() {
 					)
 					Expect(err).To(BeNil())
 				case domain.Road:
-					err := game.PlaceRoad(
-						gameCommand.playerColor,
-						gameCommand.coord.(grid.PathCoord),
-						gameCommand.buildingOrRoad.(domain.Road),
-						gameCommand.occurred,
-					)
+					err := game.PlaceRoad(gameCommand.playerColor, gameCommand.buildingOrRoad.(domain.Road), gameCommand.occurred)
 					Expect(err).To(BeNil())
 				}
 			}
@@ -351,22 +326,12 @@ var _ = Describe("Catan state initial setup", func() {
 
 		When("he tries to build a road connected to first settlement", func() {
 			It("should receive an error", func() {
-				Expect(game.PlaceRoad(
-					game.CurrentTurn(),
-					grid.PathCoord{R: 1, C: 3, D: grid.W},
-					domain.NewRoad(game.CurrentTurn()),
-					time.Now(),
-				)).To(Equal(domain.CommandIsForbiddenErr))
+				Expect(game.PlaceRoad(game.CurrentTurn(), domain.NewRoad(grid.PathCoord{R: 1, C: 3, D: grid.W}, game.CurrentTurn()), time.Now())).To(Equal(domain.CommandIsForbiddenErr))
 			})
 		})
 		When("he tries to build a road connected to second settlement", func() {
 			It("should be ok", func() {
-				Expect(game.PlaceRoad(
-					game.CurrentTurn(),
-					grid.PathCoord{R: 4, C: 3, D: grid.N},
-					domain.NewRoad(game.CurrentTurn()),
-					time.Now(),
-				)).NotTo(HaveOccurred())
+				Expect(game.PlaceRoad(game.CurrentTurn(), domain.NewRoad(grid.PathCoord{R: 4, C: 3, D: grid.N}, game.CurrentTurn()), time.Now())).NotTo(HaveOccurred())
 			})
 		})
 	})
@@ -383,8 +348,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Blue,
-					coord:          grid.PathCoord{R: 3, C: 3, D: grid.E},
-					buildingOrRoad: domain.NewRoad(domain.Blue),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 3, C: 3, D: grid.E}, domain.Blue),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -394,8 +358,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.White,
-					coord:          grid.PathCoord{R: 2, C: 3, D: grid.E},
-					buildingOrRoad: domain.NewRoad(domain.White),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 2, C: 3, D: grid.E}, domain.White),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -405,8 +368,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Red,
-					coord:          grid.PathCoord{R: 1, C: 1, D: grid.N},
-					buildingOrRoad: domain.NewRoad(domain.Red),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 1, C: 1, D: grid.N}, domain.Red),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -416,8 +378,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Yellow,
-					coord:          grid.PathCoord{R: 1, C: 2, D: grid.N},
-					buildingOrRoad: domain.NewRoad(domain.Yellow),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 1, C: 2, D: grid.N}, domain.Yellow),
 					occurred:       startGameCommandOccurred,
 				},
 			}
@@ -434,12 +395,7 @@ var _ = Describe("Catan state initial setup", func() {
 					)
 					Expect(err).NotTo(HaveOccurred())
 				case domain.Road:
-					err := game.PlaceRoad(
-						gameCommand.playerColor,
-						gameCommand.coord.(grid.PathCoord),
-						gameCommand.buildingOrRoad.(domain.Road),
-						gameCommand.occurred,
-					)
+					err := game.PlaceRoad(gameCommand.playerColor, gameCommand.buildingOrRoad.(domain.Road), gameCommand.occurred)
 					Expect(err).NotTo(HaveOccurred())
 				}
 			}
@@ -478,8 +434,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Blue,
-					coord:          grid.PathCoord{R: 3, C: 3, D: grid.E},
-					buildingOrRoad: domain.NewRoad(domain.Blue),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 3, C: 3, D: grid.E}, domain.Blue),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -489,8 +444,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.White,
-					coord:          grid.PathCoord{R: 2, C: 3, D: grid.E},
-					buildingOrRoad: domain.NewRoad(domain.White),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 2, C: 3, D: grid.E}, domain.White),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -500,8 +454,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Red,
-					coord:          grid.PathCoord{R: 1, C: 1, D: grid.N},
-					buildingOrRoad: domain.NewRoad(domain.Red),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 1, C: 1, D: grid.N}, domain.Red),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -511,8 +464,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Yellow,
-					coord:          grid.PathCoord{R: 1, C: 2, D: grid.N},
-					buildingOrRoad: domain.NewRoad(domain.Yellow),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 1, C: 2, D: grid.N}, domain.Yellow),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -522,8 +474,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Yellow,
-					coord:          grid.PathCoord{R: 4, C: 3, D: grid.N},
-					buildingOrRoad: domain.NewRoad(domain.Yellow),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 4, C: 3, D: grid.N}, domain.Yellow),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -533,8 +484,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Red,
-					coord:          grid.PathCoord{R: 3, C: 1, D: grid.N},
-					buildingOrRoad: domain.NewRoad(domain.Red),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 3, C: 1, D: grid.N}, domain.Red),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -544,8 +494,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.White,
-					coord:          grid.PathCoord{R: 2, C: 1, D: grid.W},
-					buildingOrRoad: domain.NewRoad(domain.White),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 2, C: 1, D: grid.W}, domain.White),
 					occurred:       startGameCommandOccurred,
 				},
 				{
@@ -555,8 +504,7 @@ var _ = Describe("Catan state initial setup", func() {
 				},
 				{
 					playerColor:    domain.Blue,
-					coord:          grid.PathCoord{R: 4, C: 2, D: grid.N},
-					buildingOrRoad: domain.NewRoad(domain.Blue),
+					buildingOrRoad: domain.NewRoad(grid.PathCoord{R: 4, C: 2, D: grid.N}, domain.Blue),
 					occurred:       startGameCommandOccurred,
 				},
 			}
@@ -568,12 +516,7 @@ var _ = Describe("Catan state initial setup", func() {
 				case domain.Settlement:
 					Expect(game.PlaceSettlement(gameCommand.playerColor, gameCommand.buildingOrRoad.(domain.Settlement), gameCommand.occurred)).To(BeNil())
 				case domain.Road:
-					Expect(game.PlaceRoad(
-						gameCommand.playerColor,
-						gameCommand.coord.(grid.PathCoord),
-						gameCommand.buildingOrRoad.(domain.Road),
-						gameCommand.occurred,
-					)).To(BeNil())
+					Expect(game.PlaceRoad(gameCommand.playerColor, gameCommand.buildingOrRoad.(domain.Road), gameCommand.occurred)).To(BeNil())
 				}
 			}
 		})

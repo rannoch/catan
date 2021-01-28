@@ -4,8 +4,6 @@ import (
 	"errors"
 	"reflect"
 	"time"
-
-	"github.com/rannoch/catan/grid"
 )
 
 type (
@@ -119,15 +117,8 @@ func (game *Game) PlaceSettlement(playerColor Color, settlement Settlement, occu
 	return game.currentState.PlaceSettlement(playerColor, settlement, occurred)
 }
 
-func (game *Game) PlaceRoad(
-	playerColor Color,
-	pathCoord grid.PathCoord,
-	road Road,
-	occurred time.Time,
-) error {
-	return game.currentState.PlaceRoad(
-		playerColor, pathCoord, road, occurred,
-	)
+func (game *Game) PlaceRoad(playerColor Color, road Road, occurred time.Time) error {
+	return game.currentState.PlaceRoad(playerColor, road, occurred)
 }
 
 func (game *Game) RollDice(playerColor Color, occurred time.Time) error {
@@ -251,6 +242,28 @@ func (game Game) Version() int64 {
 
 func (game *Game) incrementVersion() {
 	game.version++
+}
+
+func (game *Game) placeSettlement(settlement Settlement) error {
+	intersection, exists := game.Board().Intersection(settlement.IntersectionCoord())
+	if !exists {
+		return BadIntersectionCoordErr
+	}
+
+	intersection.SetBuilding(settlement)
+
+	return game.Board().UpdateIntersection(settlement.IntersectionCoord(), intersection)
+}
+
+func (game *Game) placeRoad(road Road) error {
+	path, exists := game.Board().Path(road.PathCoord())
+	if !exists {
+		panic("todo") // todo
+	}
+
+	path.road = &road
+
+	return game.Board().UpdatePath(road.PathCoord(), path)
 }
 
 func (game *Game) addPlayer(player Player) {

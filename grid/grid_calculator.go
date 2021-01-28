@@ -15,12 +15,19 @@ package grid
 //         \ _ _ /
 type HexagonGridCalculator interface {
 	IntersectionAdjacentHexes(intersectionCoord IntersectionCoord) []HexCoord
+
 	IntersectionAdjacentPaths(intersectionCoord IntersectionCoord) []PathCoord
+
 	IntersectionAdjacentIntersections(intersectionCoord IntersectionCoord) []IntersectionCoord
+
 	HexAdjacentIntersections(hexCoord HexCoord) []IntersectionCoord
+
 	HexAdjacentPaths(hexCoord HexCoord) []PathCoord
+
 	PathAdjacentIntersections(pathCoord PathCoord) []IntersectionCoord
+
 	PathAdjacentPaths(pathCoord PathCoord) []PathCoord
+
 	PathsJointIntersection(pathCoord1, pathCoord2 PathCoord) (IntersectionCoord, bool)
 }
 

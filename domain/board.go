@@ -10,23 +10,25 @@ import (
 type Board interface {
 	grid.HexagonGridCalculator
 
-	Intersection(intersectionCoord grid.IntersectionCoord) (Intersection, bool)
+	Intersections() []Intersection
 
-	Hex(hexCoord grid.HexCoord) (Hex, bool)
+	Paths() []Path
+
+	Hexes() []Hex
+
+	Intersection(intersectionCoord grid.IntersectionCoord) (Intersection, bool)
 
 	Path(pathCoord grid.PathCoord) (Path, bool)
 
+	Hex(hexCoord grid.HexCoord) (Hex, bool)
+
+	UpdateIntersection(intersectionCoord grid.IntersectionCoord, intersection Intersection) error
+
+	UpdatePath(pathCoord grid.PathCoord, path Path) error
+
+	UpdateHex(hexCoord grid.HexCoord, hex Hex) error
+
 	HexesByNumberToken(numberToken int64) []Hex
-
-	PlaceSettlementOrCity(building Building)
-
-	BuildRoad(pathCoord grid.PathCoord, road Road)
-
-	LongestRoad(playerColor Color) int64
-
-	GetResourcesByRoll(roll int64) map[Color][]ResourceCard
-
-	IntersectionInitialResources(intersectionCoord grid.IntersectionCoord) []ResourceCard
 }
 
 var (
@@ -36,6 +38,8 @@ var (
 	IntersectionAlreadyHasObjectErr = errors.New("intersectionCoord already has an object")
 	// BadPathCoordErr is used when path in not the board
 	BadPathCoordErr = errors.New("bad path coord")
+	// BadPathCoordErr is used when path in not the board
+	BadHexCoordErr = errors.New("bad hex coord")
 )
 
 type BoardWithOffsetCoord struct {
@@ -61,7 +65,7 @@ func NewBoardWithOffsetCoord(
 		adjacentIntersectionCoords := boardWithOffsetCoord.HexAdjacentIntersections(hexCoord)
 
 		for _, intersectionCoord := range adjacentIntersectionCoords {
-			boardWithOffsetCoord.intersections[intersectionCoord] = Intersection{}
+			boardWithOffsetCoord.intersections[intersectionCoord] = NewIntersection(intersectionCoord)
 		}
 
 		adjacentPathCoords := boardWithOffsetCoord.HexAdjacentPaths(hexCoord)
@@ -92,55 +96,68 @@ func (board BoardWithOffsetCoord) Path(pathCoord grid.PathCoord) (Path, bool) {
 	return path, exists
 }
 
-func (board BoardWithOffsetCoord) HexesByNumberToken(roll int64) []Hex {
-	panic("implement me")
-}
+func (board BoardWithOffsetCoord) Intersections() []Intersection {
+	intersections := make([]Intersection, 0, len(board.intersections))
 
-func (board *BoardWithOffsetCoord) PlaceSettlementOrCity(building Building) {
-	intersection, exists := board.Intersection(building.IntersectionCoord())
-	if !exists {
-		panic("todo") // todo
+	for _, intersection := range board.intersections {
+		intersections = append(intersections, intersection)
 	}
 
-	intersection.building = building
-
-	board.intersections[building.IntersectionCoord()] = intersection
+	return intersections
 }
 
-func (board *BoardWithOffsetCoord) BuildRoad(pathCoord grid.PathCoord, road Road) {
-	path, exists := board.Path(pathCoord)
-	if !exists {
-		panic("todo") // todo
+func (board BoardWithOffsetCoord) Paths() []Path {
+	paths := make([]Path, 0, len(board.intersections))
+
+	for _, path := range board.paths {
+		paths = append(paths, path)
 	}
 
-	path.road = &road
+	return paths
+}
+
+func (board BoardWithOffsetCoord) Hexes() []Hex {
+	hexes := make([]Hex, 0, len(board.hexes))
+
+	for _, hex := range board.hexes {
+		hexes = append(hexes, hex)
+	}
+
+	return hexes
+}
+
+func (board BoardWithOffsetCoord) UpdateIntersection(intersectionCoord grid.IntersectionCoord, intersection Intersection) error {
+	_, exists := board.intersections[intersectionCoord]
+	if !exists {
+		return BadIntersectionCoordErr
+	}
+
+	board.intersections[intersectionCoord] = intersection
+	return nil
+}
+
+func (board BoardWithOffsetCoord) UpdatePath(pathCoord grid.PathCoord, path Path) error {
+	_, exists := board.paths[pathCoord]
+	if !exists {
+		return BadPathCoordErr
+	}
 
 	board.paths[pathCoord] = path
+	return nil
 }
 
-func (board BoardWithOffsetCoord) LongestRoad(playerColor Color) int64 {
-	panic("implement me")
-}
-
-func (board BoardWithOffsetCoord) GetResourcesByRoll(roll int64) map[Color][]ResourceCard {
-	panic("implement me")
-}
-
-func (board BoardWithOffsetCoord) IntersectionInitialResources(intersectionCoord grid.IntersectionCoord) []ResourceCard {
-	hexCoords := board.IntersectionAdjacentHexes(intersectionCoord)
-
-	var resources []ResourceCard
-
-	for _, hexCoord := range hexCoords {
-		hex, exists := board.Hex(hexCoord)
-		if !exists {
-			continue
-		}
-
-		resources = append(resources, hex.Resource.GetResourceCard(1)...)
+func (board BoardWithOffsetCoord) UpdateHex(hexCoord grid.HexCoord, hex Hex) error {
+	_, exists := board.hexes[hexCoord]
+	if !exists {
+		return BadHexCoordErr
 	}
 
-	return resources
+	board.hexes[hexCoord] = hex
+	return nil
+}
+
+func (board BoardWithOffsetCoord) HexesByNumberToken(roll int64) []Hex {
+	panic("implement me")
 }
 
 // settlement, city, or knight in future
@@ -221,11 +238,16 @@ func (c City) Cost() []ResourceCard {
 }
 
 type Road struct {
+	coord grid.PathCoord
 	color Color
 }
 
-func NewRoad(color Color) Road {
-	return Road{color: color}
+func NewRoad(coord grid.PathCoord, color Color) Road {
+	return Road{coord: coord, color: color}
+}
+
+func (r Road) PathCoord() grid.PathCoord {
+	return r.coord
 }
 
 var (
@@ -257,8 +279,13 @@ const (
 )
 
 type Intersection struct {
+	coord    grid.IntersectionCoord
 	port     interface{} // todo port
 	building Building
+}
+
+func NewIntersection(coord grid.IntersectionCoord) Intersection {
+	return Intersection{coord: coord}
 }
 
 func (intersection Intersection) Building() Building {

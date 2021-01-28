@@ -87,6 +87,9 @@ func (gameStatePlayerIsToPlaceSettlement *GameStatePlayerIsToPlaceSettlement) Ap
 			panic(err)
 		}
 
-		game.Board().PlaceSettlementOrCity(event.Settlement)
+		err = game.placeSettlement(event.Settlement)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

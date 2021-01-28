@@ -73,7 +73,7 @@ func (gameStatePlay *GameStatePlay) PlaceSettlement(playerColor Color, settlemen
 	return nil
 }
 
-func (gameStatePlay *GameStatePlay) PlaceRoad(playerColor Color, pathCoord grid.PathCoord, road Road, occurred time.Time) error {
+func (gameStatePlay *GameStatePlay) PlaceRoad(playerColor Color, road Road, occurred time.Time) error {
 	game := gameStatePlay.game
 
 	if game.CurrentTurn() != playerColor {
@@ -96,14 +96,13 @@ func (gameStatePlay *GameStatePlay) PlaceRoad(playerColor Color, pathCoord grid.
 	}
 
 	// check if the board allowing to build
-	if err := gameStatePlay.canBuildRoad(pathCoord, road); err != nil {
+	if err := gameStatePlay.canBuildRoad(road.PathCoord(), road); err != nil {
 		return err
 	}
 
 	gameStatePlay.Apply(
 		NewEventDescriptor(game.Id(), PlayerPlacedRoadEvent{
 			PlayerColor: playerColor,
-			PathCoord:   pathCoord,
 			Road:        road,
 		}, nil, game.version, occurred,
 		),
@@ -226,7 +225,10 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 			panic(err)
 		}
 
-		game.Board().PlaceSettlementOrCity(event.Settlement)
+		err = game.placeSettlement(event.Settlement)
+		if err != nil {
+			panic(err)
+		}
 	case PlayerPlacedRoadEvent:
 		player, err := game.Player(event.PlayerColor)
 		if err != nil {
@@ -240,7 +242,7 @@ func (gameStatePlay *GameStatePlay) Apply(eventMessage EventMessage, isNew bool)
 			panic(err)
 		}
 
-		game.Board().BuildRoad(event.PathCoord, event.Road)
+		//game.Board().BuildRoad(event.PathCoord, event.Road)
 	case PlayerWasRobbedByRobberEvent:
 		// todo
 	case PlayerWasRobbedByPlayerEvent:

@@ -2,8 +2,6 @@ package domain
 
 import (
 	"time"
-
-	"github.com/rannoch/catan/grid"
 )
 
 type GameStatePlayerIsToPlaceRoad struct {
@@ -16,7 +14,7 @@ func NewGameStatePlayerIsToPlaceRoad(game *Game) *GameStatePlayerIsToPlaceRoad {
 	return &GameStatePlayerIsToPlaceRoad{game: game}
 }
 
-func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) PlaceRoad(playerColor Color, pathCoord grid.PathCoord, road Road, occurred time.Time) error {
+func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) PlaceRoad(playerColor Color, road Road, occurred time.Time) error {
 	game := gameStatePlayerIsToPlaceRoad.game
 
 	if game.CurrentTurn() != playerColor {
@@ -29,7 +27,7 @@ func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) PlaceRoad(play
 	}
 
 	// check if the board allows to build
-	if err := gameStatePlayerIsToPlaceRoad.canBuildRoad(pathCoord, road); err != nil {
+	if err := gameStatePlayerIsToPlaceRoad.canBuildRoad(road); err != nil {
 		return err
 	}
 
@@ -38,7 +36,6 @@ func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) PlaceRoad(play
 			game.Id(),
 			PlayerPlacedRoadEvent{
 				PlayerColor: playerColor,
-				PathCoord:   pathCoord,
 				Road:        road,
 			},
 			nil,
@@ -51,10 +48,10 @@ func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) PlaceRoad(play
 	return nil
 }
 
-func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) canBuildRoad(pathCoord grid.PathCoord, road Road) error {
+func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) canBuildRoad(road Road) error {
 	game := gameStatePlayerIsToPlaceRoad.game
 
-	path, exists := game.Board().Path(pathCoord)
+	path, exists := game.Board().Path(road.PathCoord())
 	if !exists {
 		return BadPathCoordErr
 	}
@@ -66,7 +63,7 @@ func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) canBuildRoad(p
 	// check if road is adjacent to existing and doesn't cross the building
 	canBuildRoad := false
 
-	adjacentIntersections := game.Board().PathAdjacentIntersections(pathCoord)
+	adjacentIntersections := game.Board().PathAdjacentIntersections(road.PathCoord())
 	for _, adjacentIntersectionCoord := range adjacentIntersections {
 		intersection, exists := game.Board().Intersection(adjacentIntersectionCoord)
 		if !exists {
@@ -87,7 +84,7 @@ func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) canBuildRoad(p
 		return nil
 	}
 
-	adjacentPaths := game.Board().PathAdjacentPaths(pathCoord)
+	adjacentPaths := game.Board().PathAdjacentPaths(road.PathCoord())
 	for _, adjacentPathCoord := range adjacentPaths {
 		adjacentPath, exists := game.Board().Path(adjacentPathCoord)
 		if !exists {
@@ -98,7 +95,7 @@ func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) canBuildRoad(p
 			continue
 		}
 
-		jointIntersectionCoord, found := game.Board().PathsJointIntersection(pathCoord, adjacentPathCoord)
+		jointIntersectionCoord, found := game.Board().PathsJointIntersection(road.PathCoord(), adjacentPathCoord)
 		if !found {
 			continue
 		}
@@ -140,6 +137,9 @@ func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) Apply(eventMes
 			panic(err)
 		}
 
-		game.Board().BuildRoad(event.PathCoord, event.Road)
+		err = game.placeRoad(event.Road)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

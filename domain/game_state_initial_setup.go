@@ -71,7 +71,7 @@ func (gameStatusInitialSetup *GameStateInitialSetup) PlaceSettlement(playerColor
 			game.Id(),
 			PlayerPickedResourcesEvent{
 				PlayerColor:     playerColor,
-				PickedResources: game.board.IntersectionInitialResources(settlement.IntersectionCoord()),
+				PickedResources: gameStatusInitialSetup.getInitialResources(settlement.IntersectionCoord()),
 			},
 			nil,
 			game.version,
@@ -84,22 +84,12 @@ func (gameStatusInitialSetup *GameStateInitialSetup) PlaceSettlement(playerColor
 	return nil
 }
 
-func (gameStatusInitialSetup *GameStateInitialSetup) PlaceRoad(
-	playerColor Color,
-	pathCoord grid.PathCoord,
-	road Road,
-	occurred time.Time,
-) error {
-	if !gameStatusInitialSetup.isRoadAdjacentToLastSettlement(pathCoord) {
+func (gameStatusInitialSetup *GameStateInitialSetup) PlaceRoad(playerColor Color, road Road, occurred time.Time) error {
+	if !gameStatusInitialSetup.isRoadAdjacentToLastSettlement(road.PathCoord()) {
 		return CommandIsForbiddenErr
 	}
 
-	if err := gameStatusInitialSetup.currentSubState.PlaceRoad(
-		playerColor,
-		pathCoord,
-		road,
-		occurred,
-	); err != nil {
+	if err := gameStatusInitialSetup.currentSubState.PlaceRoad(playerColor, road, occurred); err != nil {
 		return err
 	}
 
@@ -244,4 +234,23 @@ func (gameStatusInitialSetup *GameStateInitialSetup) checkAndMoveToPlayStateIfNe
 	game.currentState.EnterState(occurred)
 
 	return true
+}
+
+func (gameStatusInitialSetup *GameStateInitialSetup) getInitialResources(intersectionCoord grid.IntersectionCoord) []ResourceCard {
+	game := gameStatusInitialSetup.game
+
+	hexCoords := game.Board().IntersectionAdjacentHexes(intersectionCoord)
+
+	var resources []ResourceCard
+
+	for _, hexCoord := range hexCoords {
+		hex, exists := game.Board().Hex(hexCoord)
+		if !exists {
+			continue
+		}
+
+		resources = append(resources, hex.Resource.GetResourceCard(1)...)
+	}
+
+	return resources
 }

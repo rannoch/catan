@@ -52,8 +52,7 @@ var JustAfterInitialStateEvents = []interface{}{
 	},
 	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Blue,
-		PathCoord:   grid.PathCoord{R: 3, C: 3, D: grid.E},
-		Road:        domain.NewRoad(domain.Blue),
+		Road:        domain.NewRoad(grid.PathCoord{R: 3, C: 3, D: grid.E}, domain.Blue),
 	},
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Blue},
 
@@ -64,8 +63,7 @@ var JustAfterInitialStateEvents = []interface{}{
 	},
 	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.White,
-		PathCoord:   grid.PathCoord{R: 2, C: 3, D: grid.E},
-		Road:        domain.NewRoad(domain.White),
+		Road:        domain.NewRoad(grid.PathCoord{R: 2, C: 3, D: grid.E}, domain.White),
 	},
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.White},
 
@@ -76,8 +74,7 @@ var JustAfterInitialStateEvents = []interface{}{
 	},
 	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Red,
-		PathCoord:   grid.PathCoord{R: 1, C: 1, D: grid.N},
-		Road:        domain.NewRoad(domain.Red),
+		Road:        domain.NewRoad(grid.PathCoord{R: 1, C: 1, D: grid.N}, domain.Red),
 	},
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Red},
 
@@ -88,8 +85,7 @@ var JustAfterInitialStateEvents = []interface{}{
 	},
 	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Yellow,
-		PathCoord:   grid.PathCoord{R: 1, C: 2, D: grid.N},
-		Road:        domain.NewRoad(domain.Yellow),
+		Road:        domain.NewRoad(grid.PathCoord{R: 1, C: 2, D: grid.N}, domain.Yellow),
 	},
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Yellow},
 
@@ -104,8 +100,7 @@ var JustAfterInitialStateEvents = []interface{}{
 	},
 	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Yellow,
-		PathCoord:   grid.PathCoord{R: 4, C: 3, D: grid.N},
-		Road:        domain.NewRoad(domain.Yellow),
+		Road:        domain.NewRoad(grid.PathCoord{R: 4, C: 3, D: grid.N}, domain.Yellow),
 	},
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Yellow},
 
@@ -120,8 +115,7 @@ var JustAfterInitialStateEvents = []interface{}{
 	},
 	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Red,
-		PathCoord:   grid.PathCoord{R: 3, C: 1, D: grid.N},
-		Road:        domain.NewRoad(domain.Red),
+		Road:        domain.NewRoad(grid.PathCoord{R: 3, C: 1, D: grid.N}, domain.Red),
 	},
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Red},
 
@@ -136,8 +130,7 @@ var JustAfterInitialStateEvents = []interface{}{
 	},
 	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.White,
-		PathCoord:   grid.PathCoord{R: 2, C: 1, D: grid.W},
-		Road:        domain.NewRoad(domain.White),
+		Road:        domain.NewRoad(grid.PathCoord{R: 2, C: 1, D: grid.W}, domain.White),
 	},
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.White},
 
@@ -152,8 +145,7 @@ var JustAfterInitialStateEvents = []interface{}{
 	},
 	domain.PlayerPlacedRoadEvent{
 		PlayerColor: domain.Blue,
-		PathCoord:   grid.PathCoord{R: 4, C: 2, D: grid.N},
-		Road:        domain.NewRoad(domain.Blue),
+		Road:        domain.NewRoad(grid.PathCoord{R: 4, C: 2, D: grid.N}, domain.Blue),
 	},
 	domain.PlayerFinishedHisTurnEvent{PlayerColor: domain.Blue},
 

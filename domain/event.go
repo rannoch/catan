@@ -3,8 +3,6 @@ package domain
 import (
 	"reflect"
 	"time"
-
-	"github.com/rannoch/catan/grid"
 )
 
 type EventMessage interface {
@@ -128,6 +126,5 @@ type PlayerPlacedSettlementEvent struct {
 
 type PlayerPlacedRoadEvent struct {
 	PlayerColor Color
-	PathCoord   grid.PathCoord
 	Road        Road
 }
