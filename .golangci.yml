@@ -6,10 +6,12 @@ linters:
   enable:
     - errcheck
     - goimports
-#    - golint
+    #    - golint # enable later
     - govet
     - staticcheck
-
+  disable:
+    - structcheck # enable later
+    - unused # enable later
 issues:
   exclude-use-default: false
   max-issues-per-linter: 0
