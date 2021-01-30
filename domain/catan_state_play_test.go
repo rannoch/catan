@@ -1,13 +1,13 @@
-package test_test
+package domain_test
 
 import (
 	"time"
 
-	"github.com/rannoch/catan/domain/test/fixtures"
+	"github.com/rannoch/catan/domain"
+	"github.com/rannoch/catan/domain/fixtures"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/rannoch/catan/domain"
 )
 
 var _ = Describe("Catan state play", func() {
