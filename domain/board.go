@@ -264,7 +264,8 @@ var WaterHex = Hex{
 }
 
 type Hex struct {
-	NumberToken int64
+	Coord       grid.HexCoord
+	NumberToken NumberToken
 	Type        hexType
 	Resource    Resource
 }

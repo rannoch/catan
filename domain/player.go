@@ -6,6 +6,8 @@ type Color string
 
 const (
 	None   Color = "none"
+	Black  Color = "black"
+	Orange Color = "orange"
 	Red    Color = "red"
 	Blue   Color = "blue"
 	White  Color = "white"

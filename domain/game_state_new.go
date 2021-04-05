@@ -22,13 +22,42 @@ func NewGameStateNew(game *Game) *GameStateNew {
 
 var _ GameState = (*GameStateNew)(nil)
 
-func (gameStateNew *GameStateNew) SetBoardGenerator(boardGenerator BoardGenerator) error {
-	gameStateNew.game.setBoardGenerator(boardGenerator)
+func (gameStateNew *GameStateNew) SetBoardGenerator(boardGenerator BoardGenerator, occurred time.Time) error {
+	eventMessage := EventDescriptor{
+		id:       gameStateNew.game.Id(),
+		event:    BoardGeneratorSelectedEvent{BoardGenerator: boardGenerator},
+		headers:  nil,
+		version:  gameStateNew.game.Version(),
+		occurred: occurred,
+	}
+
+	gameStateNew.game.Apply(eventMessage, true)
 	return nil
 }
 
-func (gameStateNew *GameStateNew) SetPlayersShuffler(playersShuffler PlayersShuffler) error {
-	gameStateNew.game.setPlayersShuffler(playersShuffler)
+func (gameStateNew *GameStateNew) SetPlayersShuffler(playersShuffler PlayersShuffler, occurred time.Time) error {
+	eventMessage := EventDescriptor{
+		id:       gameStateNew.game.Id(),
+		event:    PlayersShufflerSelectedEvent{PlayersShuffler: playersShuffler},
+		headers:  nil,
+		version:  gameStateNew.game.Version(),
+		occurred: occurred,
+	}
+
+	gameStateNew.game.Apply(eventMessage, true)
+	return nil
+}
+
+func (gameStateNew *GameStateNew) SetDiceRoller(diceRoller DiceRoller, occurred time.Time) error {
+	eventMessage := EventDescriptor{
+		id:       gameStateNew.game.Id(),
+		event:    DiceRollerSelected{DiceRoller: diceRoller},
+		headers:  nil,
+		version:  gameStateNew.game.Version(),
+		occurred: occurred,
+	}
+
+	gameStateNew.game.Apply(eventMessage, true)
 	return nil
 }
 
@@ -98,6 +127,12 @@ func (gameStateNew *GameStateNew) Apply(eventMessage EventMessage, _ bool) {
 		game.addPlayer(event.Player)
 	case PlayerLeftTheGameEvent:
 		game.removePlayer(event.Player)
+	case BoardGeneratorSelectedEvent:
+		game.setBoardGenerator(event.BoardGenerator)
+	case PlayersShufflerSelectedEvent:
+		game.setPlayersShuffler(event.PlayersShuffler)
+	case DiceRollerSelected:
+		game.setDiceRoller(event.DiceRoller)
 	case GameStartedEvent:
 		game.setState(game.stateStarted)
 	}

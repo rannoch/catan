@@ -7,12 +7,19 @@ import (
 )
 
 type GameStatePlay struct {
-	GameStateDefault
 	game *Game
+
+	currentSubState GameState
+
+	GameStateDefault
 }
 
-func NewGameStatePlay(game *Game) *GameStatePlay {
-	return &GameStatePlay{game: game}
+func NewGameStatePlay(
+	game *Game,
+) *GameStatePlay {
+	return &GameStatePlay{
+		game: game,
+	}
 }
 
 var _ GameState = (*GameStatePlay)(nil)
@@ -184,7 +191,7 @@ func (gameStatePlay *GameStatePlay) canBuildRoad(pathCoord grid.PathCoord, road 
 	return CommandIsForbiddenErr
 }
 
-func (gameStatePlay *GameStatePlay) BuyDevelopmentCard(playerColor Color, card DevelopmentCard) error {
+func (gameStatePlay *GameStatePlay) BuyDevelopmentCard(playerColor Color) error {
 	panic("implement me")
 }
 

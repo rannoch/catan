@@ -22,11 +22,6 @@ var (
 	WrongTurnErr = errors.New("wrong turn")
 )
 
-type Roll struct {
-	Roller Color
-	Roll   int64
-}
-
 // Game aggregate
 type Game struct {
 	id GameId
@@ -53,6 +48,7 @@ type Game struct {
 
 	boardGenerator  BoardGenerator
 	playersShuffler PlayersShuffler
+	diceRoller      DiceRoller
 
 	availableResources map[ResourceCard][]ResourceCard // todo properly
 	// todo trades
@@ -75,12 +71,16 @@ func (game *Game) AddPlayer(player Player, occurred time.Time) error {
 	return game.currentState.AddPlayer(player, occurred)
 }
 
-func (game *Game) SetBoardGenerator(boardGenerator BoardGenerator) error {
-	return game.currentState.SetBoardGenerator(boardGenerator)
+func (game *Game) SetBoardGenerator(boardGenerator BoardGenerator, occurred time.Time) error {
+	return game.currentState.SetBoardGenerator(boardGenerator, occurred)
 }
 
-func (game *Game) SetPlayersShuffler(playersShuffler PlayersShuffler) error {
-	return game.currentState.SetPlayersShuffler(playersShuffler)
+func (game *Game) SetPlayersShuffler(playersShuffler PlayersShuffler, occurred time.Time) error {
+	return game.currentState.SetPlayersShuffler(playersShuffler, occurred)
+}
+
+func (game *Game) SetDiceRoller(diceRoller DiceRoller, occurred time.Time) error {
+	return game.currentState.SetDiceRoller(diceRoller, occurred)
 }
 
 func (game *Game) GenerateBoard(occurred time.Time) error {
@@ -97,6 +97,21 @@ func (game *Game) StartGame(
 	return game.currentState.StartGame(occurred)
 }
 
+func (game *Game) ChangeState(newState GameState, occurred time.Time) {
+	game.Apply(
+		NewEventDescriptor(
+			game.Id(),
+			GameEnteredState{NewState: newState},
+			nil,
+			game.version,
+			occurred,
+		),
+		true,
+	)
+
+	newState.EnterState(occurred)
+}
+
 func (game *Game) BuyRoad(playerColor Color, occurred time.Time) error {
 	return game.currentState.BuyRoad(playerColor, occurred)
 }
@@ -109,8 +124,8 @@ func (game *Game) BuyCity(playerColor Color, occurred time.Time) error {
 	return game.currentState.BuyCity(playerColor, occurred)
 }
 
-func (game *Game) BuyDevelopmentCard(playerColor Color, devCard DevelopmentCard) error {
-	return game.currentState.BuyDevelopmentCard(playerColor, devCard)
+func (game *Game) BuyDevelopmentCard(playerColor Color) error {
+	return game.currentState.BuyDevelopmentCard(playerColor)
 }
 
 func (game *Game) PlaceSettlement(playerColor Color, settlement Settlement, occurred time.Time) error {
@@ -137,20 +152,106 @@ func (game *Game) Apply(eventMessage EventMessage, isNew bool) {
 	}
 
 	switch event := eventMessage.Event().(type) {
+	case GameEnteredState:
+		game.setState(event.NewState)
 	case GameCreated:
 		gameStatePlayerIsToPlaceSettlement := NewGameStatePlayerIsToPlaceSettlement(game)
 		gameStatePlayerIsToPlaceRoad := NewGameStatePlayerIsToPlaceRoad(game)
+		gameStatePlayerIsRollingDice := NewGameStatePlayerIsRollingDice(game)
 
 		game.id = event.GameId
 		game.stateNew = NewGameStateNew(game)
 		game.stateStarted = NewGameStateStarted(game)
 		game.stateInitialSetup = NewGameStateInitialSetup(game, gameStatePlayerIsToPlaceSettlement, gameStatePlayerIsToPlaceRoad)
-		game.statePlay = NewGameStatePlay(game)
+		game.statePlay = NewGameStatePlay(game, gameStatePlayerIsRollingDice, gameStatePlayerIsToPlaceSettlement, gameStatePlayerIsToPlaceRoad)
 
 		game.setState(game.stateNew)
-	default:
-		game.currentState.Apply(eventMessage, isNew)
+	case PlayerPlacedRoadEvent:
+		game.trackChangeAndIncrementVersion(eventMessage)
+
+		player, err := game.Player(event.PlayerColor)
+		if err != nil {
+			panic(err)
+		}
+
+		player.availableRoads--
+
+		err = game.updatePlayer(player)
+		if err != nil {
+			panic(err)
+		}
+
+		err = game.placeRoad(event.Road)
+		if err != nil {
+			panic(err)
+		}
+	case PlayerPlacedInitialRoadEvent: // todo remove duplicate
+		game.trackChangeAndIncrementVersion(eventMessage)
+
+		player, err := game.Player(event.PlayerColor)
+		if err != nil {
+			panic(err)
+		}
+
+		player.availableRoads--
+
+		err = game.updatePlayer(player)
+		if err != nil {
+			panic(err)
+		}
+
+		err = game.placeRoad(event.Road)
+		if err != nil {
+			panic(err)
+		}
+	case PlayerPlacedSettlementEvent:
+		game.trackChangeAndIncrementVersion(eventMessage)
+
+		player, err := game.Player(event.PlayerColor)
+		if err != nil {
+			panic(err)
+		}
+
+		player.victoryPoints += event.Settlement.VictoryPoints()
+		player.availableSettlements--
+
+		err = game.updatePlayer(player)
+		if err != nil {
+			panic(err)
+		}
+
+		err = game.placeSettlement(event.Settlement)
+		if err != nil {
+			panic(err)
+		}
+	case PlayerPlacedInitialSettlementEvent: // todo remove duplicate
+		game.trackChangeAndIncrementVersion(eventMessage)
+
+		player, err := game.Player(event.PlayerColor)
+		if err != nil {
+			panic(err)
+		}
+
+		player.victoryPoints += event.Settlement.VictoryPoints()
+		player.availableSettlements--
+
+		err = game.updatePlayer(player)
+		if err != nil {
+			panic(err)
+		}
+
+		err = game.placeSettlement(event.Settlement)
+		if err != nil {
+			panic(err)
+		}
+	case PlayPhaseStartedEvent:
+		game.setState(game.statePlay)
 	}
+}
+
+func (game *Game) trackChangeAndIncrementVersion(eventMessage EventMessage) {
+	game.incrementVersion()
+	game.trackChange(eventMessage)
 }
 
 // todo
@@ -331,6 +432,10 @@ func (game *Game) setPlayersShuffler(playersShuffler PlayersShuffler) {
 
 func (game *Game) setBoardGenerator(boardGenerator BoardGenerator) {
 	game.boardGenerator = boardGenerator
+}
+
+func (game *Game) setDiceRoller(diceRoller DiceRoller) {
+	game.diceRoller = diceRoller
 }
 
 func (game *Game) incrementTotalTurns() {

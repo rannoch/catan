@@ -67,11 +67,15 @@ type PlayerLeftTheGameEvent struct {
 }
 
 type BoardGeneratorSelectedEvent struct {
-	boardGenerator BoardGenerator
+	BoardGenerator BoardGenerator
 }
 
 type PlayersShufflerSelectedEvent struct {
-	playersShuffler PlayersShuffler
+	PlayersShuffler PlayersShuffler
+}
+
+type DiceRollerSelected struct {
+	DiceRoller DiceRoller
 }
 
 /// In-game events
@@ -85,7 +89,30 @@ type PlayersShuffledEvent struct {
 	PlayersInOrder []Color
 }
 
+// Initial setup events
 type InitialSetupPhaseStartedEvent struct {
+}
+
+type PlayerStartedInitialSetupTurn struct {
+	PlayerColor Color
+}
+
+type GameEnteredState struct {
+	NewState GameState
+}
+
+type PlayerPlacedInitialSettlementEvent struct {
+	PlayerColor Color
+	Settlement  Settlement
+}
+
+type PlayerPlacedInitialRoadEvent struct {
+	PlayerColor Color
+	Road        Road
+}
+
+type PlayerFinishedInitialSetupTurn struct {
+	PlayerColor Color
 }
 
 type PlayPhaseStartedEvent struct {

@@ -3,6 +3,8 @@ package domain
 import (
 	"errors"
 	"time"
+
+	"github.com/rannoch/catan/grid"
 )
 
 var CommandIsForbiddenErr = errors.New("command is forbidden")
@@ -10,8 +12,9 @@ var CommandIsForbiddenErr = errors.New("command is forbidden")
 type GameState interface {
 	EnterState(occurred time.Time)
 
-	SetBoardGenerator(boardGenerator BoardGenerator) error
-	SetPlayersShuffler(playersShuffler PlayersShuffler) error
+	SetBoardGenerator(boardGenerator BoardGenerator, occurred time.Time) error
+	SetPlayersShuffler(playersShuffler PlayersShuffler, occurred time.Time) error
+	SetDiceRoller(diceRoller DiceRoller, occurred time.Time) error
 
 	GenerateBoard(occurred time.Time) error
 	ShufflePlayers(occurred time.Time) error
@@ -33,12 +36,17 @@ type GameState interface {
 
 	PlaceRoad(playerColor Color, road Road, occurred time.Time) error
 
-	BuyDevelopmentCard(playerColor Color, card DevelopmentCard) error
+	PlaceRobber(playerColor Color, hexCoord grid.HexCoord) error
+
+	RobPlayer(playerColor Color, targetColor Color) error
+
+	BuyDevelopmentCard(playerColor Color) error
+
+	PlayDevelopmentCard(playerColor Color, card DevelopmentCard) error
 
 	TurnOrder() []Color
 	EndTurn(playerColor Color, occurred time.Time) error
 	CurrentTurn() Color
-	Apply(eventMessage EventMessage, isNew bool)
 }
 
 type GameStateDefault struct{}
@@ -55,11 +63,15 @@ func (GameStateDefault) RemovePlayer(Player, time.Time) error {
 	return CommandIsForbiddenErr
 }
 
-func (d GameStateDefault) SetBoardGenerator(BoardGenerator) error {
+func (d GameStateDefault) SetBoardGenerator(BoardGenerator, time.Time) error {
 	return CommandIsForbiddenErr
 }
 
-func (d GameStateDefault) SetPlayersShuffler(PlayersShuffler) error {
+func (d GameStateDefault) SetPlayersShuffler(PlayersShuffler, time.Time) error {
+	return CommandIsForbiddenErr
+}
+
+func (d GameStateDefault) SetDiceRoller(DiceRoller, time.Time) error {
 	return CommandIsForbiddenErr
 }
 
@@ -99,7 +111,19 @@ func (GameStateDefault) PlaceRoad(Color, Road, time.Time) error {
 	return CommandIsForbiddenErr
 }
 
-func (GameStateDefault) BuyDevelopmentCard(Color, DevelopmentCard) error {
+func (d GameStateDefault) PlaceRobber(Color, grid.HexCoord) error {
+	return CommandIsForbiddenErr
+}
+
+func (d GameStateDefault) RobPlayer(Color, Color) error {
+	return CommandIsForbiddenErr
+}
+
+func (GameStateDefault) BuyDevelopmentCard(Color) error {
+	return CommandIsForbiddenErr
+}
+
+func (d GameStateDefault) PlayDevelopmentCard(playerColor Color, card DevelopmentCard) error {
 	return CommandIsForbiddenErr
 }
 

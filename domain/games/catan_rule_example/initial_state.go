@@ -1,11 +1,19 @@
-package fixtures
+package catan_rule_example
 
 import (
+	"time"
+
 	"github.com/rannoch/catan/domain"
 	"github.com/rannoch/catan/grid"
 )
 
-var JustAfterInitialStateEvents = []interface{}{
+var gamePlayStateJustStarted = domain.Game{}
+
+func GamePlayStateJustStarted() domain.Game {
+	return gamePlayStateJustStarted
+}
+
+var events = []interface{}{
 	domain.GameCreated{GameId: "test_id"},
 	domain.PlayerJoinedTheGameEvent{Player: domain.NewPlayer(domain.Blue, "baska")},
 	domain.PlayerJoinedTheGameEvent{Player: domain.NewPlayer(domain.White, "bot")},
@@ -151,4 +159,16 @@ var JustAfterInitialStateEvents = []interface{}{
 
 	domain.PlayPhaseStartedEvent{},
 	domain.PlayerStartedHisTurnEvent{PlayerColor: domain.Blue},
+}
+
+func init() {
+	for _, event := range events {
+		gamePlayStateJustStarted.Apply(domain.NewEventDescriptor(
+			gamePlayStateJustStarted.Id(),
+			event,
+			nil,
+			gamePlayStateJustStarted.Version(),
+			time.Now(),
+		), true)
+	}
 }

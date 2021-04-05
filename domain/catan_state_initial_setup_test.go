@@ -33,25 +33,25 @@ type testBoardGenerator struct{}
 func (testBoardGenerator) GenerateBoard() domain.Board {
 	return domain.NewBoardWithOffsetCoord(
 		map[grid.HexCoord]domain.Hex{
-			{R: 0, C: 0}: {NumberToken: 10, Type: domain.HexTypeResource, Resource: domain.Ore},
-			{R: 0, C: 1}: {NumberToken: 2, Type: domain.HexTypeResource, Resource: domain.Sheep},
-			{R: 0, C: 2}: {NumberToken: 9, Type: domain.HexTypeResource, Resource: domain.Wood},
-			{R: 1, C: 0}: {NumberToken: 12, Type: domain.HexTypeResource, Resource: domain.Wheat},
-			{R: 1, C: 1}: {NumberToken: 6, Type: domain.HexTypeResource, Resource: domain.Brick},
-			{R: 1, C: 2}: {NumberToken: 4, Type: domain.HexTypeResource, Resource: domain.Sheep},
-			{R: 1, C: 3}: {NumberToken: 10, Type: domain.HexTypeResource, Resource: domain.Brick},
-			{R: 2, C: 0}: {NumberToken: 9, Type: domain.HexTypeResource, Resource: domain.Wheat},
-			{R: 2, C: 1}: {NumberToken: 11, Type: domain.HexTypeResource, Resource: domain.Wood},
-			{R: 2, C: 2}: {NumberToken: 0, Type: domain.HexTypeDesert, Resource: domain.EmptyResource},
-			{R: 2, C: 3}: {NumberToken: 3, Type: domain.HexTypeResource, Resource: domain.Wood},
-			{R: 2, C: 4}: {NumberToken: 8, Type: domain.HexTypeResource, Resource: domain.Ore},
-			{R: 3, C: 1}: {NumberToken: 8, Type: domain.HexTypeResource, Resource: domain.Wood},
-			{R: 3, C: 2}: {NumberToken: 3, Type: domain.HexTypeResource, Resource: domain.Ore},
-			{R: 3, C: 3}: {NumberToken: 4, Type: domain.HexTypeResource, Resource: domain.Wheat},
-			{R: 3, C: 4}: {NumberToken: 5, Type: domain.HexTypeResource, Resource: domain.Sheep},
-			{R: 4, C: 2}: {NumberToken: 5, Type: domain.HexTypeResource, Resource: domain.Brick},
-			{R: 4, C: 3}: {NumberToken: 6, Type: domain.HexTypeResource, Resource: domain.Wheat},
-			{R: 4, C: 4}: {NumberToken: 11, Type: domain.HexTypeResource, Resource: domain.Sheep},
+			{R: 0, C: 0}: {NumberToken: domain.MustGetNumberToken(10), Type: domain.HexTypeResource, Resource: domain.Ore},
+			{R: 0, C: 1}: {NumberToken: domain.MustGetNumberToken(2), Type: domain.HexTypeResource, Resource: domain.Sheep},
+			{R: 0, C: 2}: {NumberToken: domain.MustGetNumberToken(9), Type: domain.HexTypeResource, Resource: domain.Wood},
+			{R: 1, C: 0}: {NumberToken: domain.MustGetNumberToken(12), Type: domain.HexTypeResource, Resource: domain.Wheat},
+			{R: 1, C: 1}: {NumberToken: domain.MustGetNumberToken(6), Type: domain.HexTypeResource, Resource: domain.Brick},
+			{R: 1, C: 2}: {NumberToken: domain.MustGetNumberToken(4), Type: domain.HexTypeResource, Resource: domain.Sheep},
+			{R: 1, C: 3}: {NumberToken: domain.MustGetNumberToken(10), Type: domain.HexTypeResource, Resource: domain.Brick},
+			{R: 2, C: 0}: {NumberToken: domain.MustGetNumberToken(9), Type: domain.HexTypeResource, Resource: domain.Wheat},
+			{R: 2, C: 1}: {NumberToken: domain.MustGetNumberToken(11), Type: domain.HexTypeResource, Resource: domain.Wood},
+			{R: 2, C: 2}: {NumberToken: domain.NumberTokenEmpty, Type: domain.HexTypeDesert, Resource: domain.EmptyResource},
+			{R: 2, C: 3}: {NumberToken: domain.MustGetNumberToken(3), Type: domain.HexTypeResource, Resource: domain.Wood},
+			{R: 2, C: 4}: {NumberToken: domain.MustGetNumberToken(8), Type: domain.HexTypeResource, Resource: domain.Ore},
+			{R: 3, C: 1}: {NumberToken: domain.MustGetNumberToken(8), Type: domain.HexTypeResource, Resource: domain.Wood},
+			{R: 3, C: 2}: {NumberToken: domain.MustGetNumberToken(3), Type: domain.HexTypeResource, Resource: domain.Ore},
+			{R: 3, C: 3}: {NumberToken: domain.MustGetNumberToken(4), Type: domain.HexTypeResource, Resource: domain.Wheat},
+			{R: 3, C: 4}: {NumberToken: domain.MustGetNumberToken(5), Type: domain.HexTypeResource, Resource: domain.Sheep},
+			{R: 4, C: 2}: {NumberToken: domain.MustGetNumberToken(5), Type: domain.HexTypeResource, Resource: domain.Brick},
+			{R: 4, C: 3}: {NumberToken: domain.MustGetNumberToken(6), Type: domain.HexTypeResource, Resource: domain.Wheat},
+			{R: 4, C: 4}: {NumberToken: domain.MustGetNumberToken(11), Type: domain.HexTypeResource, Resource: domain.Sheep},
 		},
 	)
 }
@@ -89,9 +89,9 @@ var _ = Describe("Catan state initial setup", func() {
 			Expect(game.AddPlayer(player, time.Now())).To(BeNil())
 		}
 		// set board generator
-		Expect(game.SetBoardGenerator(testBoardGenerator{})).To(BeNil())
+		Expect(game.SetBoardGenerator(testBoardGenerator{}, time.Now())).To(BeNil())
 		// set players shuffler
-		Expect(game.SetPlayersShuffler(simplePlayersShuffler{})).To(BeNil())
+		Expect(game.SetPlayersShuffler(simplePlayersShuffler{}, time.Now())).To(BeNil())
 
 		Expect(game.StartGame(time.Now())).To(BeNil())
 	})
@@ -120,7 +120,7 @@ var _ = Describe("Catan state initial setup", func() {
 	})
 
 	It("should have correct version", func() {
-		Expect(game.Version()).To(Equal(int64(10)))
+		Expect(game.Version()).To(Equal(int64(12)))
 	})
 
 	Specify("no error", func() {
@@ -219,7 +219,7 @@ var _ = Describe("Catan state initial setup", func() {
 
 	When("current player tries to buy a development card", func() {
 		It("should receive an error", func() {
-			Expect(game.BuyDevelopmentCard(game.CurrentTurn(), domain.DevelopmentCard{})).To(Equal(domain.CommandIsForbiddenErr))
+			Expect(game.BuyDevelopmentCard(game.CurrentTurn())).To(Equal(domain.CommandIsForbiddenErr))
 		})
 	})
 
@@ -522,7 +522,7 @@ var _ = Describe("Catan state initial setup", func() {
 		})
 
 		It("should enter play state", func() {
-			Expect(game.InState(domain.NewGameStatePlay(game))).To(BeTrue())
+			Expect(game.InState(&domain.GameStatePlay{})).To(BeTrue())
 		})
 
 		It("players should receive initial resources", func() {

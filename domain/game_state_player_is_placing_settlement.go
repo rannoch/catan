@@ -4,17 +4,19 @@ import (
 	"time"
 )
 
-type GameStatePlayerIsToPlaceSettlement struct {
+type GameStatePlayerIsPlacingSettlement struct {
 	game *Game
+
+
 
 	GameStateDefault
 }
 
-func NewGameStatePlayerIsToPlaceSettlement(game *Game) *GameStatePlayerIsToPlaceSettlement {
-	return &GameStatePlayerIsToPlaceSettlement{game: game}
+func NewGameStatePlayerIsToPlaceSettlement(game *Game) *GameStatePlayerIsPlacingSettlement {
+	return &GameStatePlayerIsPlacingSettlement{game: game}
 }
 
-func (gameStatePlayerIsToPlaceSettlement *GameStatePlayerIsToPlaceSettlement) PlaceSettlement(playerColor Color, settlement Settlement, occurred time.Time) error {
+func (gameStatePlayerIsToPlaceSettlement *GameStatePlayerIsPlacingSettlement) PlaceSettlement(playerColor Color, settlement Settlement, occurred time.Time) error {
 	game := gameStatePlayerIsToPlaceSettlement.game
 
 	if game.CurrentTurn() != playerColor {
@@ -41,7 +43,7 @@ func (gameStatePlayerIsToPlaceSettlement *GameStatePlayerIsToPlaceSettlement) Pl
 	return nil
 }
 
-func (gameStatePlayerIsToPlaceSettlement *GameStatePlayerIsToPlaceSettlement) canBuildSettlement(settlement Settlement) error {
+func (gameStatePlayerIsToPlaceSettlement *GameStatePlayerIsPlacingSettlement) canBuildSettlement(settlement Settlement) error {
 	game := gameStatePlayerIsToPlaceSettlement.game
 
 	intersection, exists := game.Board().Intersection(settlement.IntersectionCoord())
@@ -69,7 +71,7 @@ func (gameStatePlayerIsToPlaceSettlement *GameStatePlayerIsToPlaceSettlement) ca
 	return nil
 }
 
-func (gameStatePlayerIsToPlaceSettlement *GameStatePlayerIsToPlaceSettlement) Apply(eventMessage EventMessage, _ bool) {
+func (gameStatePlayerIsToPlaceSettlement *GameStatePlayerIsPlacingSettlement) Apply(eventMessage EventMessage, _ bool) {
 	game := gameStatePlayerIsToPlaceSettlement.game
 
 	switch event := eventMessage.Event().(type) {

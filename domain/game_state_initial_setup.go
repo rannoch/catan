@@ -7,28 +7,33 @@ import (
 )
 
 type GameStateInitialSetup struct {
-	game *Game
+	turnOrder []Color
 
-	statePlayerIsToPlaceSettlement GameState
-	statePlayerIsToPlaceRoad       GameState
-
-	currentSubState                       GameState
-	playerIsToPlaceRoadAdjacentToBuilding grid.IntersectionCoord
-
-	settlements []Settlement
+	currentTurn int
 
 	GameStateDefault
+
+	game *Game
 }
 
 func NewGameStateInitialSetup(
+	gameStateDefault GameStateDefault,
 	game *Game,
-	statePlayerIsToPlaceSettlement GameState,
-	statePlayerIsToPlaceRoad GameState,
 ) *GameStateInitialSetup {
+	var turnOrderReversed = make([]Color, len(game.turnOrder))
+	copy(turnOrderReversed, game.turnOrder)
+
+	for i := len(turnOrderReversed)/2 - 1; i >= 0; i-- {
+		opp := len(turnOrderReversed) - 1 - i
+		turnOrderReversed[i], turnOrderReversed[opp] = turnOrderReversed[opp], turnOrderReversed[i]
+	}
+
+	initialSetupTurnOrder := append(game.turnOrder, turnOrderReversed...)
+
 	return &GameStateInitialSetup{
-		game:                           game,
-		statePlayerIsToPlaceSettlement: statePlayerIsToPlaceSettlement,
-		statePlayerIsToPlaceRoad:       statePlayerIsToPlaceRoad,
+		turnOrder:        initialSetupTurnOrder,
+		GameStateDefault: gameStateDefault,
+		game:             game,
 	}
 }
 
@@ -39,49 +44,16 @@ func (gameStatusInitialSetup *GameStateInitialSetup) StartGame(time.Time) error 
 }
 
 func (gameStatusInitialSetup *GameStateInitialSetup) EnterState(occurred time.Time) {
+	// if all players finished their turns, head to play state
+	if gameStatusInitialSetup.checkAndMoveToPlayStateIfNeeded(occurred) {
+		return
+	}
+
+	// change state to next turn
 	game := gameStatusInitialSetup.game
 
-	playerStartedHisTurnEventMessage := NewEventDescriptor(
-		game.Id(),
-		PlayerStartedHisTurnEvent{
-			PlayerColor: game.turnOrder[0],
-		},
-		nil,
-		game.Version(),
-		occurred,
-	)
-
-	game.Apply(playerStartedHisTurnEventMessage, true)
-}
-
-func (gameStatusInitialSetup *GameStateInitialSetup) PlaceSettlement(playerColor Color, settlement Settlement, occurred time.Time) error {
-	game := gameStatusInitialSetup.game
-
-	if err := gameStatusInitialSetup.currentSubState.PlaceSettlement(playerColor, settlement, occurred); err != nil {
-		return err
-	}
-
-	player, err := gameStatusInitialSetup.game.Player(playerColor)
-	if err != nil {
-		return err
-	}
-
-	if player.HasPlacedInitialBuildings() {
-		playerPickedResourcesEventMessage := NewEventDescriptor(
-			game.Id(),
-			PlayerPickedResourcesEvent{
-				PlayerColor:     playerColor,
-				PickedResources: gameStatusInitialSetup.getInitialResources(settlement.IntersectionCoord()),
-			},
-			nil,
-			game.version,
-			occurred,
-		)
-
-		game.Apply(playerPickedResourcesEventMessage, true)
-	}
-
-	return nil
+	gameStateInitialSetupPlayerTurn := NewGameStateInitialSetupPlayerTurn(game, gameStatusInitialSetup.CurrentTurn(), gameStatusInitialSetup)
+	game.ChangeState(gameStateInitialSetupPlayerTurn, occurred)
 }
 
 func (gameStatusInitialSetup *GameStateInitialSetup) PlaceRoad(playerColor Color, road Road, occurred time.Time) error {
@@ -162,19 +134,11 @@ func (gameStatusInitialSetup *GameStateInitialSetup) endTurn(playerColor Color, 
 }
 
 func (gameStatusInitialSetup *GameStateInitialSetup) CurrentTurn() Color {
-	return gameStatusInitialSetup.game.CurrentTurn()
+	return gameStatusInitialSetup.turnOrder[gameStatusInitialSetup.currentTurn]
 }
 
 func (gameStatusInitialSetup *GameStateInitialSetup) TurnOrder() []Color {
-	var turnOrderReversed = make([]Color, len(gameStatusInitialSetup.game.turnOrder))
-	copy(turnOrderReversed, gameStatusInitialSetup.game.turnOrder)
-
-	for i := len(turnOrderReversed)/2 - 1; i >= 0; i-- {
-		opp := len(turnOrderReversed) - 1 - i
-		turnOrderReversed[i], turnOrderReversed[opp] = turnOrderReversed[opp], turnOrderReversed[i]
-	}
-
-	return append(gameStatusInitialSetup.game.turnOrder, turnOrderReversed...)
+	return gameStatusInitialSetup.turnOrder
 }
 
 func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMessage, isNew bool) {
@@ -183,7 +147,7 @@ func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMes
 	switch event := eventMessage.Event().(type) {
 	case PlayerStartedHisTurnEvent:
 		game.setCurrentTurn(event.PlayerColor)
-		gameStatusInitialSetup.currentSubState = gameStatusInitialSetup.statePlayerIsToPlaceSettlement
+		gameStatusInitialSetup.currentSubState = gameStatusInitialSetup.statePlayerIsPlacingSettlement
 	case PlayerFinishedHisTurnEvent:
 		game.incrementTotalTurns()
 		game.setCurrentTurn(None)
@@ -191,7 +155,7 @@ func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMes
 		gameStatusInitialSetup.currentSubState.Apply(eventMessage, isNew)
 
 		gameStatusInitialSetup.settlements = append(gameStatusInitialSetup.settlements, event.Settlement)
-		gameStatusInitialSetup.currentSubState = gameStatusInitialSetup.statePlayerIsToPlaceRoad
+		gameStatusInitialSetup.currentSubState = gameStatusInitialSetup.statePlayerIsPlacingRoad
 		gameStatusInitialSetup.playerIsToPlaceRoadAdjacentToBuilding = event.Settlement.IntersectionCoord()
 	case PlayerPickedResourcesEvent:
 		player, err := game.Player(event.PlayerColor)
@@ -205,10 +169,6 @@ func (gameStatusInitialSetup *GameStateInitialSetup) Apply(eventMessage EventMes
 		if err != nil {
 			panic(err)
 		}
-	case PlayPhaseStartedEvent:
-		game.setState(game.statePlay)
-	default:
-		gameStatusInitialSetup.currentSubState.Apply(eventMessage, isNew)
 	}
 }
 
@@ -221,17 +181,7 @@ func (gameStatusInitialSetup *GameStateInitialSetup) checkAndMoveToPlayStateIfNe
 		}
 	}
 
-	game.Apply(
-		NewEventDescriptor(
-			game.Id(),
-			PlayPhaseStartedEvent{},
-			nil,
-			game.version,
-			occurred,
-		),
-		true,
-	)
-	game.currentState.EnterState(occurred)
+	game.ChangeState(NewGameStatePlay(game), occurred)
 
 	return true
 }

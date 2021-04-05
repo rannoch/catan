@@ -4,17 +4,17 @@ import (
 	"time"
 )
 
-type GameStatePlayerIsToPlaceRoad struct {
+type GameStatePlayerIsPlacingRoad struct {
 	game *Game
 
 	GameStateDefault
 }
 
-func NewGameStatePlayerIsToPlaceRoad(game *Game) *GameStatePlayerIsToPlaceRoad {
-	return &GameStatePlayerIsToPlaceRoad{game: game}
+func NewGameStatePlayerIsToPlaceRoad(game *Game) *GameStatePlayerIsPlacingRoad {
+	return &GameStatePlayerIsPlacingRoad{game: game}
 }
 
-func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) PlaceRoad(playerColor Color, road Road, occurred time.Time) error {
+func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsPlacingRoad) PlaceRoad(playerColor Color, road Road, occurred time.Time) error {
 	game := gameStatePlayerIsToPlaceRoad.game
 
 	if game.CurrentTurn() != playerColor {
@@ -48,7 +48,7 @@ func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) PlaceRoad(play
 	return nil
 }
 
-func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) canBuildRoad(road Road) error {
+func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsPlacingRoad) canBuildRoad(road Road) error {
 	game := gameStatePlayerIsToPlaceRoad.game
 
 	path, exists := game.Board().Path(road.PathCoord())
@@ -120,7 +120,7 @@ func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) canBuildRoad(r
 	return CommandIsForbiddenErr
 }
 
-func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsToPlaceRoad) Apply(eventMessage EventMessage, _ bool) {
+func (gameStatePlayerIsToPlaceRoad *GameStatePlayerIsPlacingRoad) Apply(eventMessage EventMessage, _ bool) {
 	game := gameStatePlayerIsToPlaceRoad.game
 
 	switch event := eventMessage.Event().(type) {
